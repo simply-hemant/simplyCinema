@@ -19,9 +19,9 @@ public class CreateUser {
     public ResponseEntity<User> saveUser(
             @RequestBody User user
     ){
-        User user1 = createUserService.save(user);
+        User savedUser = createUserService.save(user);
 
-        return ResponseEntity.ok(user);
+        return ResponseEntity.ok(savedUser);
     }
 
 }

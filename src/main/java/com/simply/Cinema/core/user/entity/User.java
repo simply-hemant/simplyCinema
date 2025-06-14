@@ -1,13 +1,26 @@
 package com.simply.Cinema.core.user.entity;
 
-import com.simply.Cinema.core.systemConfig.entity.AuditTableEntity;
 import jakarta.persistence.*;
-import org.hibernate.envers.Audited;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.util.Date;
 
 @Entity
-@Table(name = "app_user")
-@Audited
-public class User extends AuditTableEntity {
+@Table(name = "users")
+@Setter
+@Getter
+@AllArgsConstructor
+@NoArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,43 +34,20 @@ public class User extends AuditTableEntity {
 
     private String lastName;
 
-    public Long getId() {
-        return id;
-    }
+    @CreatedBy
+    private Integer createdBy;
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    @CreatedDate
+    @Column(updatable = false)
+    private Date createdDate;
 
-    public String getLastName() {
-        return lastName;
-    }
+    @LastModifiedBy
+    @Column(insertable = false)
+    private Integer updatedBy;
 
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
+    @LastModifiedDate
+    @Column(insertable = false)
+    private Date updatedDate;
 
-    public String getFirstName() {
-        return firstName;
-    }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public String getPasswordHash() {
-        return passwordHash;
-    }
-
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
 }

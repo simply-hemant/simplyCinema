@@ -37,10 +37,10 @@
 		</dependency>
 
 <!--		Envers for auduting   -->
-		<dependency>
-			<groupId>org.hibernate.orm</groupId>
-			<artifactId>hibernate-envers</artifactId>
-		</dependency>
+<!--		<dependency>-->
+<!--			<groupId>org.hibernate.orm</groupId>-->
+<!--			<artifactId>hibernate-envers</artifactId>-->
+<!--		</dependency>-->
 
 
 		<dependency>
