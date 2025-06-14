@@ -1,6 +1,7 @@
 package com.simply.Cinema.core.user.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.simply.Cinema.core.systemConfig.Enums.AuditAction;
 import com.simply.Cinema.core.user.entity.User;
 import com.simply.Cinema.core.user.repository.UserRepo;
 import com.simply.Cinema.service.config.AuditLogService;
@@ -31,10 +32,11 @@ public class CreateUserService {
         // Call audit log
         auditLogService.logEvent("users",
                 savedUser.getId(),
-                "CREATE",
+                AuditAction.CREATE,
                 null,
                 newValue,
-                user1.getId()); // You can replace 1L with logged-in user id later
+                1L // Replace with actual user ID when available
+        );          // You can replace 1L with logged-in user id later
 
         return savedUser;
     }

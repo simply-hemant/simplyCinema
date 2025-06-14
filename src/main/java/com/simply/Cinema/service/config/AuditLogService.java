@@ -1,5 +1,6 @@
 package com.simply.Cinema.service.config;
 
+import com.simply.Cinema.core.systemConfig.Enums.AuditAction;
 import com.simply.Cinema.core.systemConfig.entity.AuditLog;
 import com.simply.Cinema.core.systemConfig.repository.AuditLogRepo;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +15,7 @@ public class AuditLogService {
 
     private final AuditLogRepo auditLogRepo;
 
-    public void logEvent(String tableName, Long recordId, String action, String oldValue, String newValue, Long userId) {
+    public void logEvent(String tableName, Long recordId, AuditAction action, String oldValue, String newValue, Long userId) {
         AuditLog auditLog = new AuditLog();
 
         auditLog.setTableName(tableName);

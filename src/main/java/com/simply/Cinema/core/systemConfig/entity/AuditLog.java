@@ -1,5 +1,6 @@
 package com.simply.Cinema.core.systemConfig.entity;
 
+import com.simply.Cinema.core.systemConfig.Enums.AuditAction;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,7 +20,8 @@ public class AuditLog {
 
     private Long recordId;
 
-    private String action; // CREATE, UPDATE, DELETE
+    @Enumerated(EnumType.STRING)
+    private AuditAction action; // CREATE, UPDATE, DELETE
 
     @Lob
     private String oldValue;
