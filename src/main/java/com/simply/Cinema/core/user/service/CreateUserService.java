@@ -31,12 +31,11 @@ public class CreateUserService {
 
         // Call audit log
         auditLogService.logEvent("users",
-                savedUser.getId(),
                 AuditAction.CREATE,
                 null,
                 newValue,
-                1L // Replace with actual user ID when available
-        );          // You can replace 1L with logged-in user id later
+                savedUser.getId()
+        );
 
         return savedUser;
     }

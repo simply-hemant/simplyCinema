@@ -15,11 +15,10 @@ public class AuditLogService {
 
     private final AuditLogRepo auditLogRepo;
 
-    public void logEvent(String tableName, Long recordId, AuditAction action, String oldValue, String newValue, Long userId) {
+    public void logEvent(String tableName, AuditAction action, String oldValue, String newValue, Long userId) {
         AuditLog auditLog = new AuditLog();
 
         auditLog.setTableName(tableName);
-        auditLog.setRecordId(recordId);
         auditLog.setAction(action);
         auditLog.setOldValue(oldValue);
         auditLog.setNewValue(newValue);

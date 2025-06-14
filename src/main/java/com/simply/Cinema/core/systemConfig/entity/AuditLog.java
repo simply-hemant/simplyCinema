@@ -18,8 +18,6 @@ public class AuditLog {
 
     private String tableName;
 
-    private Long recordId;
-
     @Enumerated(EnumType.STRING)
     private AuditAction action; // CREATE, UPDATE, DELETE
 
