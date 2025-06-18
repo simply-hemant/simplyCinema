@@ -1,53 +1,60 @@
 package com.simply.Cinema.core.user.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedBy;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
-import java.util.Date;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
+@Data
 @Table(name = "users")
-@Setter
-@Getter
-@AllArgsConstructor
-@NoArgsConstructor
-@EntityListeners(AuditingEntityListener.class)
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true, nullable = false)
     private String email;
 
+    @Column(nullable = false)
     private String passwordHash;
 
     private String firstName;
 
     private String lastName;
 
-    @CreatedBy
-    private Integer createdBy;
+    @Column(unique = true)
+    private String phone;
 
-    @CreatedDate
-    @Column(updatable = false)
-    private Date createdDate;
+    private LocalDate dateOfBirth;
 
-    @LastModifiedBy
-    @Column(insertable = false)
-    private Integer updatedBy;
+    private String gender;
 
-    @LastModifiedDate
-    @Column(insertable = false)
-    private Date updatedDate;
+    private String profilePictureUrl;
 
+    private Boolean isEmailVerified = false;
 
+    private Boolean isPhoneVerified = false;
+
+    private Boolean isActive = true;
+
+    private String preferredLanguage;
+
+    private Long preferredCityId;
+
+    private Integer loyaltyPoints = 0;
+
+    private String moodPreferences; // Example: "Action, Comedy"
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
+
+    private LocalDateTime lastLoginAt;
 }

@@ -1,8 +1,9 @@
-package com.simply.Cinema.service.config;
+package com.simply.Cinema.service.systemConfig.impl;
 
 import com.simply.Cinema.core.systemConfig.Enums.AuditAction;
 import com.simply.Cinema.core.systemConfig.entity.AuditLog;
 import com.simply.Cinema.core.systemConfig.repository.AuditLogRepo;
+import com.simply.Cinema.service.systemConfig.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -10,11 +11,12 @@ import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
-public class AuditLogService {
+public class AuditLogServiceImpl implements AuditLogService {
 
 
     private final AuditLogRepo auditLogRepo;
 
+    @Override
     public void logEvent(String tableName, AuditAction action, String oldValue, String newValue, Long userId) {
         AuditLog auditLog = new AuditLog();
 

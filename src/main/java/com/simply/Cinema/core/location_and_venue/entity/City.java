@@ -1,7 +1,7 @@
-package com.simply.Cinema.core.location_and_venue;
+package com.simply.Cinema.core.location_and_venue.entity;
 
 import jakarta.persistence.*;
-import org.antlr.v4.runtime.misc.NotNull;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
