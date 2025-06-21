@@ -1,5 +1,6 @@
 package com.simply.Cinema.security.jwt;
 
+import com.simply.Cinema.core.user.emun.UserRoleEnum;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -12,9 +13,24 @@ import javax.crypto.SecretKey;
 import java.util.*;
 
 @Service
-public class jwtProvider {
+public class JwtProvider {
 
     SecretKey key = Keys.hmacShaKeyFor(JwtConstants.SECRET_KEY.getBytes());
+
+    // 🔹 Generate JWT Token
+    public String generateTokenDirect(String email, List<String> roles) {
+        String roleString = String.join(",", roles);
+
+        long EXPIRATION_TIME = 1000 * 60 * 60 * 24;  // 24 hours
+
+        return Jwts.builder()
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(new Date().getTime() + EXPIRATION_TIME))
+                .claim("email", email)
+                .claim("authorities", roleString)
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
 
     // 🔹 Generate JWT Token
     public String generateToken(Authentication auth){

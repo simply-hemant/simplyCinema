@@ -1,5 +1,6 @@
 package com.simply.Cinema.core.user.dto;
 
+import com.simply.Cinema.core.user.emun.UserRoleEnum;
 import lombok.Data;
 
 @Data
@@ -14,5 +15,6 @@ public class UserRegistrationDto {
         private String gender;
         private String preferredLanguage;
         private Long preferredCityId;
+        private UserRoleEnum role;
 
 }

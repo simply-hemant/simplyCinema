@@ -5,6 +5,7 @@ public enum UserRoleEnum{
     CUSTOMER,
     ADMIN,
     THEATRE_OWNER,
-    COUNTER_STAFF
+    COUNTER_STAFF;
+
 
 }
