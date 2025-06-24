@@ -1,6 +1,5 @@
 package com.simply.Cinema.validation.otp;
 
-import com.simply.Cinema.core.user.emun.UserRoleEnum;
 import com.simply.Cinema.exception.UserException;
 import com.simply.Cinema.validation.sms.SmsService;
 import com.simply.Cinema.validation.EmailService;
@@ -19,70 +18,85 @@ public class OtpServiceImpl implements OtpService {
     private final SmsService smsService;
 
     @Override
-    public void sendOtp(String contact, String contactType) throws UserException, MessagingException {
+    public void sendOtp(String contact) throws UserException, MessagingException {
 
         String otp = OtpUtils.generateOtp();
-        OtpVerification otpVerification;
+        OtpVerificationCode otpVerificationCode;
+        if (isEmail(contact)) {
+            otpVerificationCode = otpVerificationRepo.findByEmail(contact);
 
-        if(contactType.equalsIgnoreCase("EMAIL")){
-            otpVerification = otpVerificationRepo.findByEmail(contact);
-
-            if(otpVerification == null){
-                otpVerification = new OtpVerification();
-                otpVerification.setEmail(contact);
+            if (otpVerificationCode == null) {
+                otpVerificationCode = new OtpVerificationCode();
+                otpVerificationCode.setEmail(contact);
             }
 
-            otpVerification.setOtp(otp);
-            otpVerification.setExpiryTime(LocalDateTime.now().plusMinutes(2));
-            otpVerificationRepo.save(otpVerification);
+            otpVerificationCode.setOtp(otp);
+            otpVerificationCode.setExpiryTime(LocalDateTime.now().plusMinutes(2));
+            otpVerificationRepo.save(otpVerificationCode);
 
             emailService.sendVerificationOtpEmail(contact, otp);
-        } else if (contactType.equalsIgnoreCase("PHONE")) {
-                otpVerification = otpVerificationRepo.findByPhone(contact);
-                if(otpVerification == null){
-                    otpVerification = new OtpVerification();
-                    otpVerification.setPhone(contact);
-                }
-            otpVerification.setOtp(otp);
-            otpVerification.setExpiryTime(LocalDateTime.now().plusMinutes(2));
-            otpVerificationRepo.save(otpVerification);
 
-                smsService.sendSms(contact, otp);
-        }else {
-            throw new UserException("Invalid contact type.");
+        } else if (isPhone(contact)) {
+            otpVerificationCode = otpVerificationRepo.findByPhone(contact);
+
+            if (otpVerificationCode == null) {
+                otpVerificationCode = new OtpVerificationCode();
+                otpVerificationCode.setPhone(contact);
+            }
+
+            otpVerificationCode.setOtp(otp);
+            otpVerificationCode.setExpiryTime(LocalDateTime.now().plusMinutes(2));
+            otpVerificationRepo.save(otpVerificationCode);
+
+            smsService.sendSms(contact, otp);
+
+        } else {
+            throw new UserException("Invalid contact format.");
         }
-
     }
 
     @Override
-    public void verifyOtp(String contact, String contactType, String otp) throws UserException {
+    public void verifyOtp(String contact, String otp) throws UserException {
 
-        OtpVerification otpVerification;
+        OtpVerificationCode otpVerificationCode;
 
-        if (contactType.equalsIgnoreCase("EMAIL")) {
-            otpVerification = otpVerificationRepo.findByEmail(contact);
-        } else if (contactType.equalsIgnoreCase("PHONE")) {
-            otpVerification = otpVerificationRepo.findByPhone(contact);
+        if (isEmail(contact)) {
+            otpVerificationCode = otpVerificationRepo.findByEmail(contact);
+        } else if (isPhone(contact)) {
+            otpVerificationCode = otpVerificationRepo.findByPhone(contact);
         } else {
-            throw new UserException("Invalid contact type.");
+            throw new UserException("Invalid contact format.");
         }
 
-        if (otpVerification == null) {
+        if (otpVerificationCode == null) {
             throw new UserException("No OTP request found for the provided contact.");
         }
 
-        if (otpVerification.getExpiryTime().isBefore(LocalDateTime.now())) {
+        if (otpVerificationCode.getExpiryTime().isBefore(LocalDateTime.now())) {
             throw new UserException("OTP has expired.");
         }
 
-        if (!otpVerification.getOtp().equals(otp)) {
+        if (otpVerificationCode.getAttempts() >= 5) {
+            throw new UserException("Maximum OTP attempts exceeded. Please request a new OTP.");
+        }
+
+        if (!otpVerificationCode.getOtp().equals(otp)) {
+            otpVerificationCode.setAttempts(otpVerificationCode.getAttempts() + 1);
+            otpVerificationRepo.save(otpVerificationCode);
             throw new UserException("Invalid OTP.");
         }
 
-
-        // ✅ OTP is correct
-        // Optionally, mark OTP as used or delete the OTP record
-      //  otpVerificationRepo.delete(otpVerification);
+        // ✅ OTP is correct, delete OTP
+       // otpVerificationRepo.delete(otpVerificationCode);
 
     }
+
+    private boolean isEmail(String contact) {
+        return contact.contains("@");
+    }
+
+    private boolean isPhone(String contact) {
+        return contact.matches("\\d{10}"); // Supports 10 digit numbers
+    }
+
 }

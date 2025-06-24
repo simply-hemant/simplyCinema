@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class OtpVerification {
+public class OtpVerificationCode {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,5 +36,7 @@ public class OtpVerification {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    private int attempts = 0;
 
 }

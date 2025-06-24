@@ -32,13 +32,17 @@ public class SecurityConfig {
                                 SessionCreationPolicy.STATELESS
                         )).authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/auth/**", "/api/otp/**").permitAll()
-                        .requestMatchers("/api/**").authenticated()
+
                         .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/owner/**").hasRole("OWNER")
-                        .requestMatchers("/counter/**").hasRole("COUNTER_STAFF")
-                        .requestMatchers("/customer/**").hasRole("CUSTOMER")
+
+                        .requestMatchers("/theatre-owner/**").hasAnyRole("THEATRE_OWNER", "ADMIN")
+                        .requestMatchers("/counter-staff/**").hasAnyRole("THEATRE_OWNER", "ADMIN", "COUNTER_STAFF")
+                        .requestMatchers("/customer/**").hasAnyRole("THEATRE_OWNER", "ADMIN", "COUNTER_STAFF", "CUSTOMER")
+
+                        // All other /api/ requires authentication
+
                         .requestMatchers("/api/**").authenticated() // Should come AFTER specific role matchers
-                        .anyRequest().permitAll()
+                        .anyRequest().permitAll() // Allow everything else
                 ).addFilterBefore(new JwtTokenValidator(), BasicAuthenticationFilter.class)
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))

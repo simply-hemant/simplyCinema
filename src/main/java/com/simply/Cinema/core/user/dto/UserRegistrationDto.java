@@ -17,4 +17,6 @@ public class UserRegistrationDto {
         private Long preferredCityId;
         private UserRoleEnum role;
 
+        private String otp;
+
 }

@@ -1,6 +1,6 @@
 package com.simply.Cinema.service.auth.impl;
 
-import com.simply.Cinema.core.user.dto.EmailOtpLoginDto;
+import com.simply.Cinema.core.user.dto.EmailOtpDto;
 import com.simply.Cinema.core.user.dto.PhoneOtpLoginDto;
 import com.simply.Cinema.core.user.dto.UserLoginDto;
 import com.simply.Cinema.core.user.dto.UserRegistrationDto;
@@ -11,11 +11,11 @@ import com.simply.Cinema.core.user.repository.UserRepo;
 import com.simply.Cinema.core.user.repository.UserRoleRepo;
 import com.simply.Cinema.exception.UserException;
 import com.simply.Cinema.response.AuthResponse;
-import com.simply.Cinema.security.CustomUserDetailsService;
 import com.simply.Cinema.security.jwt.JwtProvider;
 import com.simply.Cinema.service.auth.AuthService;
 import com.simply.Cinema.validation.otp.OtpService;
-import com.simply.Cinema.validation.otp.OtpVerification;
+import com.simply.Cinema.validation.otp.OtpVerificationCode;
+import com.simply.Cinema.validation.otp.OtpVerificationRepo;
 import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,14 +23,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
@@ -42,7 +39,8 @@ public class AuthServiceImpl implements AuthService {
     private final UserRoleRepo userRoleRepo;
     private final JwtProvider jwtProvider;
     private final AuthenticationManager authenticationManager;
-    private final CustomUserDetailsService customUserDetailsService;
+    private final OtpVerificationRepo otpVerificationRepo;
+    private final OtpService otpService;
 
     @Override
     public String createUser(UserRegistrationDto req) throws UserException {
@@ -75,7 +73,7 @@ public class AuthServiceImpl implements AuthService {
 
         UserRole customerRole = new UserRole();
 
-        customerRole.setRole(UserRoleEnum.CUSTOMER);
+        customerRole.setRole(UserRoleEnum.ROLE_CUSTOMER);
         customerRole.setAssignedAt(LocalDateTime.now());
         customerRole.setIsActive(true);
         customerRole.setUser(savedUser);
@@ -83,14 +81,8 @@ public class AuthServiceImpl implements AuthService {
         userRoleRepo.save(customerRole);
 
         List<GrantedAuthority> authorities = new ArrayList<>();
-        authorities.add(new SimpleGrantedAuthority(UserRoleEnum.CUSTOMER.toString()));
+        authorities.add(new SimpleGrantedAuthority(UserRoleEnum.ROLE_CUSTOMER.toString()));
 
-//        // 🔐 Authenticate and generate JWT directly
-//        Authentication authentication = authenticationManager.authenticate(
-//                new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword())
-//        );
-
- //       String token = jwtProvider.generateToken(authentication);
         String token = jwtProvider.generateTokenDirect(savedUser.getEmail(), List.of("ROLE_CUSTOMER"));
 
         return token;
@@ -136,11 +128,65 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void sendEmailOtpForSignup(String email) throws UserException, MessagingException {
 
+        if(userRepo.existsByEmail(email)){
+            throw new UserException("Email is already registered.");
+        }
+
+        otpService.sendOtp(email);
+
     }
 
     @Override
-    public String verifyEmailOtpAndRegister(OtpVerification req) throws UserException {
-        return "";
+    public String verifyEmailOtpAndRegister(UserRegistrationDto req) throws UserException {
+
+            OtpVerificationCode otpVerificationcode = otpVerificationRepo.findByEmail(req.getEmail());
+
+            if (otpVerificationcode == null)
+                throw new UserException("Wrong Otp.");
+
+            if (otpVerificationcode.getExpiryTime().isBefore(LocalDateTime.now())) {
+                otpVerificationRepo.delete(otpVerificationcode);
+                throw new UserException("OTP has expired.");
+            }
+
+            if (otpVerificationcode.getAttempts() >= 5) {
+                otpVerificationRepo.delete(otpVerificationcode);
+                throw new UserException("Maximum OTP attempts exceeded.");
+            }
+
+            if (!otpVerificationcode.getOtp().equals(req.getOtp())) {
+                otpVerificationcode.setAttempts(otpVerificationcode.getAttempts() + 1);
+                otpVerificationRepo.save(otpVerificationcode);
+                throw new UserException("Invalid OTP.");
+            }
+
+            User createdUser = new User();
+            createdUser.setFirstName(req.getFirstName());
+            createdUser.setLastName(req.getLastName());
+            createdUser.setEmail(req.getEmail());
+
+            if (req.getDateOfBirth() != null) {
+                createdUser.setDateOfBirth(LocalDate.parse(req.getDateOfBirth()));
+            }
+
+            User  savedUser = userRepo.save(createdUser);
+
+            UserRole userRole = new UserRole();
+            userRole.setRole(UserRoleEnum.ROLE_CUSTOMER);
+            userRole.setAssignedAt(LocalDateTime.now());
+            userRole.setIsActive(true);
+
+            userRole.setUser(savedUser);
+
+            userRoleRepo.save(userRole);
+
+            otpVerificationRepo.delete(otpVerificationcode);
+
+            String token = jwtProvider.generateTokenDirect(createdUser.getEmail(), List.of("ROLE_CUSTOMER"));
+
+            return token;
+
+
     }
 
     @Override
@@ -149,18 +195,74 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public String verifyPhoneOtpAndRegister(OtpVerification req) throws UserException {
+    public String verifyPhoneOtpAndRegister(OtpVerificationCode req) throws UserException {
         return "";
     }
 
     @Override
     public void sendEmailOtpForLogin(String email) throws UserException, MessagingException {
 
+
+        if(!userRepo.existsByEmail(email)){
+            throw new UserException("Email is not registered.");
+        }
+
+        otpService.sendOtp(email);
+
     }
 
     @Override
-    public String loginWithEmailOtp(EmailOtpLoginDto req) throws UserException {
-        return "";
+    public AuthResponse loginWithEmailOtp(EmailOtpDto req) throws UserException {
+
+        OtpVerificationCode otpVerificationcode = otpVerificationRepo.findByEmail(req.getEmail());
+
+        if (otpVerificationcode == null)
+            throw new UserException("No otp found.");
+
+        if (otpVerificationcode.getExpiryTime().isBefore(LocalDateTime.now())) {
+            otpVerificationRepo.delete(otpVerificationcode);
+            throw new UserException("OTP has expired.");
+        }
+
+        if (otpVerificationcode.getAttempts() >= 5) {
+            otpVerificationRepo.delete(otpVerificationcode);
+            throw new UserException("Maximum OTP attempts exceeded.");
+        }
+
+        if (!otpVerificationcode.getOtp().equals(req.getOtp())) {
+            otpVerificationcode.setAttempts(otpVerificationcode.getAttempts() + 1);
+            otpVerificationRepo.save(otpVerificationcode);
+            throw new UserException("Invalid OTP.");
+        }
+
+        // ✅ OTP is valid, delete it
+        otpVerificationRepo.delete(otpVerificationcode);
+
+        User user = userRepo.findByEmail(req.getEmail())
+                .orElseThrow(() -> new UserException("User not found."));
+
+        //Last Login Update
+        user.setLastLoginAt(LocalDateTime.now());
+        userRepo.save(user);
+
+        List<UserRole> userRoles = user.getRoles();
+        if (userRoles.isEmpty()) {
+            throw new UserException("User has no assigned roles.");
+        }
+
+        UserRoleEnum userRole = userRoles.get(0).getRole(); // Assuming one primary role
+
+        // ✅ Generate JWT token
+        String token = jwtProvider.generateTokenDirect(user.getEmail(), List.of(userRole.toString()));
+
+        // ✅ Prepare Auth Response
+        AuthResponse res = new AuthResponse();
+        res.setJwt(token);
+        res.setMessage("Login successful");
+        res.setRole(userRole);
+
+        return res;
+
     }
 
     @Override
@@ -173,24 +275,29 @@ public class AuthServiceImpl implements AuthService {
         return "";
     }
 
-    private Authentication customAuthenticate(String email, String rawPassword) throws UserException {
+    @Override
+    public void logoutUser(String token) throws UserException {
 
-        UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
-
-        if (userDetails == null) {
-            throw new UserException("User not found.");
-        }
-
-        // ✅ Validate password (since you are handling normal login here)
-        if (!passwordEncoder.matches(rawPassword, userDetails.getPassword())) {
-            throw new UserException("Invalid password.");
-        }
-
-        return new UsernamePasswordAuthenticationToken(
-                userDetails,
-                null,
-                userDetails.getAuthorities()
-        );
     }
+//
+//    private Authentication customAuthenticate(String email, String rawPassword) throws UserException {
+//
+//        UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
+//
+//        if (userDetails == null) {
+//            throw new UserException("User not found.");
+//        }
+//
+//        // ✅ Validate password (since you are handling normal login here)
+//        if (!passwordEncoder.matches(rawPassword, userDetails.getPassword())) {
+//            throw new UserException("Invalid password.");
+//        }
+//
+//        return new UsernamePasswordAuthenticationToken(
+//                userDetails,
+//                null,
+//                userDetails.getAuthorities()
+//        );
+//    }
 
 }
