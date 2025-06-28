@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class AuditLog {
 
     @Id
@@ -21,17 +23,16 @@ public class AuditLog {
     @Enumerated(EnumType.STRING)
     private AuditAction action; // CREATE, UPDATE, DELETE
 
-    @Lob
-    private String oldValue;
-
-    @Lob
-    private String newValue;
+//    @Lob
+//    @Column(columnDefinition = "TEXT")
+//    private String oldValue;
+//
+//    @Lob
+//    @Column(columnDefinition = "TEXT")
+//    private String newValue;
 
     private Long userId;
 
     private LocalDateTime createdAt;
 
-    public AuditLog() {
-
-    }
 }

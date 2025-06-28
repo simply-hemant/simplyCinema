@@ -1,10 +1,10 @@
 package com.simply.Cinema.core.user.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -36,6 +36,7 @@ public class User {
     @Column(unique = true)
     private String phone;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dateOfBirth;
 
     private String gender;
@@ -57,7 +58,7 @@ public class User {
    // private UserRoleEnum role;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
+//    @JsonIgnore
     private List<UserRole> roles = new ArrayList<>();
 
     private String moodPreferences; // Example: "Action, Comedy"
@@ -69,5 +70,8 @@ public class User {
     private LocalDateTime updatedAt;
 
     private LocalDateTime lastLoginAt;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private UserPreferences userPreferences;
 
 }

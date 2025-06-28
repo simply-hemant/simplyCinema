@@ -8,16 +8,11 @@ import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 @SpringBootApplication
-@EnableJpaAuditing(auditorAwareRef = "awareRef")
 public class SimplyCinemaApplication {
-
-	@Bean
-	public AuditorAware<Integer> awareRef (){
-		return new AuditorConfig();
-	}
 
 	public static void main(String[] args) {
 		SpringApplication.run(SimplyCinemaApplication.class, args);
 	}
+
 
 }

@@ -2,8 +2,11 @@ package com.simply.Cinema.core.user.dto;
 
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class UserProfileDto {
+
     private Long id;
     private String email;
     private String firstName;
@@ -18,4 +21,6 @@ public class UserProfileDto {
     private Long preferredCityId;
     private Integer loyaltyPoints;
     private String moodPreferences;
+    private List<String> roles;
+
 }

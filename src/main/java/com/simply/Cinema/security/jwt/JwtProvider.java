@@ -1,6 +1,5 @@
 package com.simply.Cinema.security.jwt;
 
-import com.simply.Cinema.core.user.emun.UserRoleEnum;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -44,7 +43,7 @@ public class JwtProvider {
                 .setExpiration(new Date(new Date(). getTime() + EXPIRATION_TIME))
                 .claim("email", auth.getName())   // Add email in token
                 .claim("authorities", roles)      // Add roles in token
-                .signWith(key, SignatureAlgorithm.HS256) // 🔥 Best Practice: Specify algorithm
+                .signWith(key, SignatureAlgorithm.HS256) // Best Practice: Specify algorithm
                 .compact();
     }
 

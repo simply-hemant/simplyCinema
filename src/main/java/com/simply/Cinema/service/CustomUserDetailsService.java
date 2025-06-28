@@ -1,4 +1,5 @@
-package com.simply.Cinema.security;
+package com.simply.Cinema.service;
+
 
 import com.simply.Cinema.core.user.entity.User;
 import com.simply.Cinema.core.user.repository.UserRepo;
@@ -27,6 +28,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         return buildUserDetails(user);
     }
+
 
     private UserDetails buildUserDetails(User user) {
         List<GrantedAuthority> authorities = new ArrayList<>();

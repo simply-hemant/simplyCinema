@@ -1,14 +1,11 @@
 package com.simply.Cinema.service.auth;
 
 
-import com.simply.Cinema.core.user.dto.EmailOtpDto;
-import com.simply.Cinema.core.user.dto.PhoneOtpLoginDto;
+import com.simply.Cinema.core.user.dto.OtpDto;
 import com.simply.Cinema.core.user.dto.UserLoginDto;
 import com.simply.Cinema.core.user.dto.UserRegistrationDto;
-import com.simply.Cinema.core.user.emun.UserRoleEnum;
 import com.simply.Cinema.exception.UserException;
 import com.simply.Cinema.response.AuthResponse;
-import com.simply.Cinema.validation.otp.OtpVerificationCode;
 import jakarta.mail.MessagingException;
 
 public interface AuthService {
@@ -25,16 +22,18 @@ public interface AuthService {
 
     // 🔹 Email OTP Login
     void sendEmailOtpForLogin(String email) throws UserException, MessagingException;
-    AuthResponse loginWithEmailOtp(EmailOtpDto req) throws UserException;
+    AuthResponse loginWithEmailOtp(OtpDto req) throws UserException;
 
     // 🔹 Phone OTP Signup
-     void sendPhoneOtpForSignup(String phone, UserRoleEnum role) throws UserException;
-     String verifyPhoneOtpAndRegister(OtpVerificationCode req) throws UserException;
+     void sendPhoneOtpForSignup(String phone) throws UserException, MessagingException ;
+     String verifyPhoneOtpAndRegister(UserRegistrationDto req) throws UserException;
 
     // 🔹 Phone OTP Login
      void sendPhoneOtpForLogin(String phone) throws UserException, MessagingException;
-     String loginWithPhoneOtp(PhoneOtpLoginDto req) throws UserException;
+     AuthResponse loginWithPhoneOtp(OtpDto req) throws UserException;
 
-    void logoutUser(String token) throws UserException;
+     //reset pass
+
+    //forget password
 
 }

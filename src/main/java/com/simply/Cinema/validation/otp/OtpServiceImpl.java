@@ -37,18 +37,21 @@ public class OtpServiceImpl implements OtpService {
             emailService.sendVerificationOtpEmail(contact, otp);
 
         } else if (isPhone(contact)) {
+
+            String formattedPhone = formatPhoneNumber(contact);
+
             otpVerificationCode = otpVerificationRepo.findByPhone(contact);
 
             if (otpVerificationCode == null) {
                 otpVerificationCode = new OtpVerificationCode();
-                otpVerificationCode.setPhone(contact);
+                otpVerificationCode.setPhone(formattedPhone);
             }
 
             otpVerificationCode.setOtp(otp);
             otpVerificationCode.setExpiryTime(LocalDateTime.now().plusMinutes(2));
             otpVerificationRepo.save(otpVerificationCode);
 
-            smsService.sendSms(contact, otp);
+            smsService.sendSms(formattedPhone, otp);
 
         } else {
             throw new UserException("Invalid contact format.");
@@ -63,6 +66,8 @@ public class OtpServiceImpl implements OtpService {
         if (isEmail(contact)) {
             otpVerificationCode = otpVerificationRepo.findByEmail(contact);
         } else if (isPhone(contact)) {
+            String formattedPhone = formatPhoneNumber(contact);
+
             otpVerificationCode = otpVerificationRepo.findByPhone(contact);
         } else {
             throw new UserException("Invalid contact format.");
@@ -96,7 +101,17 @@ public class OtpServiceImpl implements OtpService {
     }
 
     private boolean isPhone(String contact) {
-        return contact.matches("\\d{10}"); // Supports 10 digit numbers
+
+        // Allow with or without country code
+        return contact.matches("^\\+?\\d{10,15}$"); // supports +91xxxxxxxxxx or xxxxxxxxxx
+
+    }
+
+    private String formatPhoneNumber(String phone) {
+        if (phone.startsWith("+")) {
+            return phone;
+        }
+        return "+91" + phone; // assuming India. You can make this dynamic later.
     }
 
 }

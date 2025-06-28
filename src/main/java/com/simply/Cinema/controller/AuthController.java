@@ -1,18 +1,16 @@
 package com.simply.Cinema.controller;
 
-import com.simply.Cinema.core.user.dto.EmailOtpDto;
+import com.simply.Cinema.core.user.dto.OtpDto;
 import com.simply.Cinema.core.user.dto.UserLoginDto;
 import com.simply.Cinema.core.user.dto.UserRegistrationDto;
-import com.simply.Cinema.core.user.emun.UserRoleEnum;
+import com.simply.Cinema.core.user.Enum.UserRoleEnum;
 import com.simply.Cinema.core.user.repository.UserRepo;
-import com.simply.Cinema.core.user.repository.UserRoleRepo;
 import com.simply.Cinema.exception.UserException;
 import com.simply.Cinema.service.auth.AuthService;
 import com.simply.Cinema.response.AuthResponse;
 import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.config.annotation.authentication.configuration.EnableGlobalAuthentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,7 +20,6 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserRepo userRepo;
-    private final UserRoleRepo userRoleRepo;
 
     @PostMapping("/signup/pass")
     public ResponseEntity<AuthResponse> registerUser(@RequestBody UserRegistrationDto req) throws UserException{
@@ -48,7 +45,7 @@ public class AuthController {
     }
 
     @PostMapping("/send-otp/email")
-    public ResponseEntity<String> sendOtpEmail(@RequestBody EmailOtpDto req) throws UserException, MessagingException {
+    public ResponseEntity<String> sendOtpEmail(@RequestBody OtpDto req) throws UserException, MessagingException {
 
         String email = req.getEmail();
 
@@ -71,7 +68,21 @@ public class AuthController {
     @PostMapping("/signup/verify-otp-register")
     public ResponseEntity<AuthResponse> verifyOtpAndRegister(@RequestBody UserRegistrationDto req) throws UserException {
 
-        String token = authService.verifyEmailOtpAndRegister(req);
+        if ((req.getEmail() == null || req.getEmail().isBlank()) && (req.getPhone() == null || req.getPhone().isBlank())) {
+            throw new UserException("Email or Phone is required.");
+        }
+
+        String token;
+
+        if (req.getEmail() != null && !req.getEmail().isBlank()) {
+            // 🔹 Email OTP flow
+            token = authService.verifyEmailOtpAndRegister(req);
+        } else if (req.getPhone() != null && !req.getPhone().isBlank()) {
+            // 🔹 Phone OTP flow
+            token = authService.verifyPhoneOtpAndRegister(req);
+        } else {
+            throw new UserException("Invalid input.");
+        }
 
         AuthResponse res = new AuthResponse();
         res.setMessage("register success");
@@ -82,12 +93,45 @@ public class AuthController {
     }
 
     @PostMapping("/login/email-otp")
-    public ResponseEntity<AuthResponse> loginWithEmailOtp(@RequestBody EmailOtpDto req) throws UserException, MessagingException
+    public ResponseEntity<AuthResponse> loginWithEmailOtp(@RequestBody OtpDto req) throws UserException
     {
-        AuthResponse authResponse = authService.loginWithEmailOtp(req);
+        if ((req.getEmail() == null || req.getEmail().isBlank()) && (req.getPhone() == null || req.getPhone().isBlank())) {
+            throw new UserException("Email or Phone is required.");
+        }
 
+        AuthResponse authResponse;
+
+        if (req.getEmail() != null && !req.getEmail().isBlank()) {
+            // 🔹 Email OTP Login
+            authResponse = authService.loginWithEmailOtp(req);
+        } else if (req.getPhone() != null && !req.getPhone().isBlank()) {
+            // 🔹 Phone OTP Login
+            authResponse = authService.loginWithPhoneOtp(req);
+        } else {
+            throw new UserException("Invalid input.");
+        }
         return ResponseEntity.ok(authResponse);
 
+    }
+
+    @PostMapping("/send-otp/phone")
+    public ResponseEntity<String> sendOtpPhone(@RequestBody OtpDto req) throws UserException, MessagingException {
+
+        String phone = req.getPhone();
+
+        if (phone == null || phone.isBlank()) {
+            throw new UserException("phone cannot be empty.");
+        }
+
+        if (userRepo.existsByPhone(phone)) {
+            // If phone is already registered, send OTP for login
+            authService.sendPhoneOtpForLogin(phone);
+            return ResponseEntity.ok("OTP sent successfully to your Phone for login.");
+        } else {
+            // If phone is not registered, send OTP for signup
+            authService.sendPhoneOtpForSignup(phone);
+            return ResponseEntity.ok("OTP sent successfully to your Phone for signup.");
+        }
     }
 
 

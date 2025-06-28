@@ -1,6 +1,6 @@
 package com.simply.Cinema.response;
 
-import com.simply.Cinema.core.user.emun.UserRoleEnum;
+import com.simply.Cinema.core.user.Enum.UserRoleEnum;
 import lombok.Data;
 
 @Data

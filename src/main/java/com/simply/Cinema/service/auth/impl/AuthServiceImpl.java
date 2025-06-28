@@ -1,10 +1,10 @@
 package com.simply.Cinema.service.auth.impl;
 
-import com.simply.Cinema.core.user.dto.EmailOtpDto;
-import com.simply.Cinema.core.user.dto.PhoneOtpLoginDto;
+import com.simply.Cinema.core.systemConfig.Enums.AuditAction;
+import com.simply.Cinema.core.user.dto.OtpDto;
 import com.simply.Cinema.core.user.dto.UserLoginDto;
 import com.simply.Cinema.core.user.dto.UserRegistrationDto;
-import com.simply.Cinema.core.user.emun.UserRoleEnum;
+import com.simply.Cinema.core.user.Enum.UserRoleEnum;
 import com.simply.Cinema.core.user.entity.User;
 import com.simply.Cinema.core.user.entity.UserRole;
 import com.simply.Cinema.core.user.repository.UserRepo;
@@ -13,6 +13,7 @@ import com.simply.Cinema.exception.UserException;
 import com.simply.Cinema.response.AuthResponse;
 import com.simply.Cinema.security.jwt.JwtProvider;
 import com.simply.Cinema.service.auth.AuthService;
+import com.simply.Cinema.service.systemConfig.impl.AuditLogService;
 import com.simply.Cinema.validation.otp.OtpService;
 import com.simply.Cinema.validation.otp.OtpVerificationCode;
 import com.simply.Cinema.validation.otp.OtpVerificationRepo;
@@ -41,6 +42,8 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final OtpVerificationRepo otpVerificationRepo;
     private final OtpService otpService;
+    private final AuditLogService auditLogService;
+
 
     @Override
     public String createUser(UserRegistrationDto req) throws UserException {
@@ -70,6 +73,11 @@ public class AuthServiceImpl implements AuthService {
 
         User savedUser = userRepo.save(user);
         System.out.println("User created successfully with ID: " + savedUser.getId());
+
+        // Manual Audit Logging
+        auditLogService.logEvent("User", AuditAction.CREATE, savedUser.getId());
+
+//        System.out.println("User ID from AuditContext: " + AuditContext.getUserId());
 
         UserRole customerRole = new UserRole();
 
@@ -190,13 +198,65 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void sendPhoneOtpForSignup(String phone, UserRoleEnum role) throws UserException {
+    public void sendPhoneOtpForSignup(String phone) throws UserException, MessagingException  {
 
+        if(userRepo.existsByPhone(phone)){
+            throw new UserException("Email is already registered.");
+        }
+
+        otpService.sendOtp(phone);
     }
 
     @Override
-    public String verifyPhoneOtpAndRegister(OtpVerificationCode req) throws UserException {
-        return "";
+    public String verifyPhoneOtpAndRegister(UserRegistrationDto req) throws UserException {
+
+        OtpVerificationCode otpVerificationcode = otpVerificationRepo.findByPhone(req.getPhone());
+
+        if (otpVerificationcode == null)
+            throw new UserException("Wrong Otp.");
+
+        if (otpVerificationcode.getExpiryTime().isBefore(LocalDateTime.now())) {
+            otpVerificationRepo.delete(otpVerificationcode);
+            throw new UserException("OTP has expired.");
+        }
+
+        if (otpVerificationcode.getAttempts() >= 5) {
+            otpVerificationRepo.delete(otpVerificationcode);
+            throw new UserException("Maximum OTP attempts exceeded.");
+        }
+
+        if (!otpVerificationcode.getOtp().equals(req.getOtp())) {
+            otpVerificationcode.setAttempts(otpVerificationcode.getAttempts() + 1);
+            otpVerificationRepo.save(otpVerificationcode);
+            throw new UserException("Invalid OTP.");
+        }
+
+        User createdUser = new User();
+        createdUser.setFirstName(req.getFirstName());
+        createdUser.setLastName(req.getLastName());
+        createdUser.setPhone(req.getPhone());
+
+        if (req.getDateOfBirth() != null) {
+            createdUser.setDateOfBirth(LocalDate.parse(req.getDateOfBirth()));
+        }
+
+        User savedUser = userRepo.save(createdUser);
+
+        UserRole userRole = new UserRole();
+        userRole.setRole(UserRoleEnum.ROLE_CUSTOMER);
+        userRole.setAssignedAt(LocalDateTime.now());
+        userRole.setIsActive(true);
+
+        userRole.setUser(savedUser);
+
+        userRoleRepo.save(userRole);
+
+        otpVerificationRepo.delete(otpVerificationcode);
+
+        String token = jwtProvider.generateTokenDirect(createdUser.getPhone(), List.of("ROLE_CUSTOMER"));
+
+        return token;
+
     }
 
     @Override
@@ -212,7 +272,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public AuthResponse loginWithEmailOtp(EmailOtpDto req) throws UserException {
+    public AuthResponse loginWithEmailOtp(OtpDto req) throws UserException {
 
         OtpVerificationCode otpVerificationcode = otpVerificationRepo.findByEmail(req.getEmail());
 
@@ -268,17 +328,67 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void sendPhoneOtpForLogin(String phone) throws UserException, MessagingException {
 
+        if (!userRepo.existsByPhone(phone)) {
+            throw new UserException("Phone number is not registered.");
+        }
+
+        otpService.sendOtp(phone);
     }
 
     @Override
-    public String loginWithPhoneOtp(PhoneOtpLoginDto req) throws UserException {
-        return "";
-    }
+    public AuthResponse loginWithPhoneOtp(OtpDto req) throws UserException {
 
-    @Override
-    public void logoutUser(String token) throws UserException {
+
+        OtpVerificationCode otpVerificationCode = otpVerificationRepo.findByPhone(req.getPhone());
+
+        if (otpVerificationCode == null)
+            throw new UserException("No OTP found.");
+
+        if (otpVerificationCode.getExpiryTime().isBefore(LocalDateTime.now())) {
+            otpVerificationRepo.delete(otpVerificationCode);
+            throw new UserException("OTP has expired.");
+        }
+
+        if (otpVerificationCode.getAttempts() >= 5) {
+            otpVerificationRepo.delete(otpVerificationCode);
+            throw new UserException("Maximum OTP attempts exceeded.");
+        }
+
+        if (!otpVerificationCode.getOtp().equals(req.getOtp())) {
+            otpVerificationCode.setAttempts(otpVerificationCode.getAttempts() + 1);
+            otpVerificationRepo.save(otpVerificationCode);
+            throw new UserException("Invalid OTP.");
+        }
+
+        otpVerificationRepo.delete(otpVerificationCode); // ✅ OTP used
+
+        User user = userRepo.findByPhone(req.getPhone())
+                .orElseThrow(() -> new UserException("User not found."));
+
+        // Update last login time
+        user.setLastLoginAt(LocalDateTime.now());
+        userRepo.save(user);
+
+        List<UserRole> userRoles = user.getRoles();
+        if (userRoles.isEmpty()) {
+            throw new UserException("User has no assigned roles.");
+        }
+
+        UserRoleEnum userRole = userRoles.get(0).getRole();
+
+        // ✅ Generate JWT token
+        String token = jwtProvider.generateTokenDirect(user.getPhone(), List.of(userRole.toString()));
+
+        // ✅ Prepare Auth Response
+        AuthResponse res = new AuthResponse();
+        res.setJwt(token);
+        res.setMessage("Login successful");
+        res.setRole(userRole);
+
+        return res;
 
     }
+    
 //
 //    private Authentication customAuthenticate(String email, String rawPassword) throws UserException {
 //

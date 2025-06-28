@@ -1,11 +1,16 @@
 package com.simply.Cinema.core.location_and_venue.entity;
 
 import jakarta.persistence.*;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class City {
 
     @Id
@@ -24,8 +29,9 @@ public class City {
     @Column(length = 50)
     private String timezone;
 
-    private Boolean isActive;
+    private Boolean isActive = true;
 
+    @CreationTimestamp
     private LocalDateTime createdAt;
 
 }
