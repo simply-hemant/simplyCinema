@@ -3,9 +3,11 @@ package com.simply.Cinema.service.location_and_venue.impl;
 import com.simply.Cinema.core.location_and_venue.dto.CityDto;
 import com.simply.Cinema.core.location_and_venue.entity.City;
 import com.simply.Cinema.core.location_and_venue.repository.CityRepo;
+import com.simply.Cinema.core.systemConfig.Enums.AuditAction;
 import com.simply.Cinema.exception.BusinessException;
 import com.simply.Cinema.exception.ResourceNotFoundException;
 import com.simply.Cinema.service.location_and_venue.CityService;
+import com.simply.Cinema.service.systemConfig.impl.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +19,7 @@ import java.util.List;
 public class CityServiceImpl implements CityService {
 
     private final CityRepo cityRepo;
+    private final AuditLogService auditLogService;
 
     @Override
     public CityDto createCity(CityDto cityDto) throws BusinessException {
@@ -53,6 +56,8 @@ public class CityServiceImpl implements CityService {
         responseDto.setTimezone(savedCity.getTimezone());
         responseDto.setIsActive(savedCity.getIsActive());
 
+        auditLogService.logEvent("City", AuditAction.CREATE, savedCity.getId());
+
         return responseDto;
     }
 
@@ -85,6 +90,8 @@ public class CityServiceImpl implements CityService {
         responseDto.setCountry(updatedCity.getCountry());
         responseDto.setTimezone(updatedCity.getTimezone());
         responseDto.setIsActive(updatedCity.getIsActive());
+
+        auditLogService.logEvent("City", AuditAction.UPDATE, updatedCity.getId());
 
         return responseDto;
     }
