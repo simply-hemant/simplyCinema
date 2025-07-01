@@ -33,6 +33,8 @@ public class AuditLog {
 
     private Long userId;
 
+    private Long entityId;
+
     private LocalDateTime createdAt;
 
 }

@@ -44,7 +44,6 @@ public class AuthServiceImpl implements AuthService {
     private final OtpService otpService;
     private final AuditLogService auditLogService;
 
-
     @Override
     public String createUser(UserRegistrationDto req) throws UserException {
 
@@ -75,7 +74,7 @@ public class AuthServiceImpl implements AuthService {
         System.out.println("User created successfully with ID: " + savedUser.getId());
 
         // Manual Audit Logging
-        auditLogService.logEvent("User", AuditAction.CREATE, savedUser.getId());
+        auditLogService.logEvent("User", AuditAction.CREATE, savedUser.getId(), savedUser.getId());
 
 //        System.out.println("User ID from AuditContext: " + AuditContext.getUserId());
 

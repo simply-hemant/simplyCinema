@@ -20,4 +20,6 @@ public class TheatreRequestDto {
     private Boolean foodBeverageAvailable;
     private LocalTime openingHour;
     private LocalTime closingHour;
+
+
 }

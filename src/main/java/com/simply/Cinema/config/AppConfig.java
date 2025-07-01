@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.simply.Cinema.security.jwt.JwtTokenValidator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -29,32 +30,11 @@ import java.util.List;
 @EnableMethodSecurity(prePostEnabled = true)
 public class AppConfig {
 
-//    @Bean
-//    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-//
-//        http.sessionManagement(management -> management
-//                        .sessionCreationPolicy(
-//                                SessionCreationPolicy.STATELESS
-//                        )).authorizeHttpRequests(authorize -> authorize
-//                        .requestMatchers("/api/auth/**", "/api/otp/**").permitAll()
-//
-//                        .requestMatchers("/admin/**").hasRole("ADMIN")
-//                        .requestMatchers("/theatre-owner/**").hasAnyRole("THEATRE_OWNER", "ADMIN")
-//                        .requestMatchers("/counter-staff/**").hasAnyRole("THEATRE_OWNER", "ADMIN", "COUNTER_STAFF")
-//                        .requestMatchers("/customer/**").hasAnyRole("THEATRE_OWNER", "ADMIN", "COUNTER_STAFF", "CUSTOMER")
-//                        // All other /api/ requires authentication
-//
-//                        .requestMatchers("/api/**").authenticated() // Should come AFTER specific role matchers
-//
-//                        .anyRequest().permitAll() // Allow everything else
-//                ).addFilterBefore(new JwtTokenValidator(), BasicAuthenticationFilter.class)
-//                .csrf(csrf -> csrf.disable())
-//                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-//                .formLogin(AbstractHttpConfigurer::disable) // 🔥 Disable default form login
-//                .httpBasic(AbstractHttpConfigurer::disable); // 🔥 Disable HTTP Basic Auth
-//
-//        return http.build();
-//    }
+    private final JwtTokenValidator jwtTokenValidator;
+
+    public AppConfig(@Lazy JwtTokenValidator jwtTokenValidator) {
+        this.jwtTokenValidator = jwtTokenValidator;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -68,7 +48,7 @@ public class AppConfig {
                         .requestMatchers(
                                 "/api/auth/**",                  // login, register, otp
                                 "/api/movies/**",                // movie listing & details
-                                "/api/theatres/**",              // theatre listing & details
+                                "/api/theatre/**",              // theatre listing & details
                                 "/api/cities/**",                // cities and location
                                 "/api/shows/**",                 // show availability
                                 "/api/search/**",                // search movies, theatres
@@ -81,7 +61,7 @@ public class AppConfig {
 
                         // 🛡️ Role-based routes
                         .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/theatre-owner/**").hasAnyRole("THEATRE_OWNER", "ADMIN")
+                        .requestMatchers("/owner/**").hasAnyRole("THEATRE_OWNER", "ADMIN")
                         .requestMatchers("/counter-staff/**").hasAnyRole("COUNTER_STAFF", "THEATRE_OWNER", "ADMIN")
                         .requestMatchers("/customer/**").hasAnyRole("CUSTOMER", "COUNTER_STAFF", "THEATRE_OWNER", "ADMIN")
 
@@ -91,11 +71,11 @@ public class AppConfig {
                         // ✅ Allow everything else (like static files, home page)
                         .anyRequest().permitAll()
                 )
-                .addFilterBefore(new JwtTokenValidator(), BasicAuthenticationFilter.class)
+                .addFilterBefore(jwtTokenValidator, BasicAuthenticationFilter.class) // ✅ Use injected bean
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .formLogin(AbstractHttpConfigurer::disable)
-                .httpBasic(AbstractHttpConfigurer::disable);
+                .formLogin(AbstractHttpConfigurer::disable) // 🔥 Disable default form login
+                .httpBasic(AbstractHttpConfigurer::disable); // 🔥 Disable HTTP Basic Auth
 
         return http.build();
     }
@@ -140,6 +120,10 @@ public class AppConfig {
         return configuration.getAuthenticationManager();
     }
 
+    @Bean
+    public JwtTokenValidator jwtTokenValidator() {
+        return new JwtTokenValidator(); // or return new JwtTokenValidator(deps);
+    }
 
     public class JacksonConfig {
         @Bean

@@ -47,17 +47,33 @@ public class JwtProvider {
                 .compact();
     }
 
-    private String populateAuthorities(Collection<? extends GrantedAuthority> authorities) {
+//    private String populateAuthorities(Collection<? extends GrantedAuthority> authorities) {
+//
+//        Set<String> auths = new HashSet<>();
+//
+//        for(GrantedAuthority authority : authorities){
+//            auths.add(authority.getAuthority());  // Extract role name
+//        }
+//
+//        return String.join(",", auths); // Combines all roles into a single comma-separated string
+//
+//    }
 
+    private String populateAuthorities(Collection<? extends GrantedAuthority> authorities) {
         Set<String> auths = new HashSet<>();
 
-        for(GrantedAuthority authority : authorities){
-            auths.add(authority.getAuthority());  // Extract role name
+        for (GrantedAuthority authority : authorities) {
+            String raw = authority.getAuthority();
+            // ✅ Remove "ROLE_" prefix if present
+            if (raw.startsWith("ROLE_")) {
+                raw = raw.substring(5);
+            }
+            auths.add(raw);
         }
 
-        return String.join(",", auths); // Combines all roles into a single comma-separated string
-
+        return String.join(",", auths); // e.g. "ADMIN,THEATRE_OWNER"
     }
+
 
     public String getEmailFromJwtToken(String jwt){
         if(jwt != null && jwt.startsWith("Bearer ")){

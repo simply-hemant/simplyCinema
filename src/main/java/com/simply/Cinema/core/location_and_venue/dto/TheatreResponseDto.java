@@ -8,6 +8,7 @@ import java.util.List;
 
 @Data
 public class TheatreResponseDto {
+
     private Long id;
     private String name;
     private Long cityId;
@@ -23,4 +24,5 @@ public class TheatreResponseDto {
     private LocalTime closingHour;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
 }

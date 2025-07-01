@@ -8,9 +8,11 @@ import com.simply.Cinema.exception.BusinessException;
 import com.simply.Cinema.exception.ResourceNotFoundException;
 import com.simply.Cinema.service.location_and_venue.CityService;
 import com.simply.Cinema.service.systemConfig.impl.AuditLogService;
+import com.simply.Cinema.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,6 +31,9 @@ public class CityServiceImpl implements CityService {
             throw new BusinessException("City with the same name and state already exists.");
         }
 
+        // ✅ Get currently logged-in user ID
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+
         //CityDto ➝ City (for saving)
         //City ➝ CityDto (for sending response)
 
@@ -38,6 +43,7 @@ public class CityServiceImpl implements CityService {
         city.setState(cityDto.getState());
         city.setCountry(cityDto.getCountry());
         city.setTimezone(cityDto.getTimezone());
+        city.setCreatedAt(LocalDateTime.now());
 
         // ✅ Set `isActive` based on input:
         // - If user provides a value (true/false), use it.
@@ -55,8 +61,9 @@ public class CityServiceImpl implements CityService {
         responseDto.setCountry(savedCity.getCountry());
         responseDto.setTimezone(savedCity.getTimezone());
         responseDto.setIsActive(savedCity.getIsActive());
+        responseDto.setCreatedAt(savedCity.getCreatedAt());
 
-        auditLogService.logEvent("City", AuditAction.CREATE, savedCity.getId());
+        auditLogService.logEvent("City", AuditAction.CREATE, savedCity.getId(), currentUserId);
 
         return responseDto;
     }
@@ -64,9 +71,11 @@ public class CityServiceImpl implements CityService {
     @Override
     public CityDto updateCity(Long cityId, CityDto cityDto) throws ResourceNotFoundException, BusinessException {
 
+        // ✅ Get currently logged-in user ID
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+
         City city = cityRepo.findById(cityId)
                 .orElseThrow(() -> new BusinessException("City not found with id "+cityId));
-
 
         // 📝 Update fields only if new values are provided
         if (cityDto.getName() != null) city.setName(cityDto.getName());
@@ -91,7 +100,7 @@ public class CityServiceImpl implements CityService {
         responseDto.setTimezone(updatedCity.getTimezone());
         responseDto.setIsActive(updatedCity.getIsActive());
 
-        auditLogService.logEvent("City", AuditAction.UPDATE, updatedCity.getId());
+        auditLogService.logEvent("City", AuditAction.UPDATE, updatedCity.getId(), currentUserId);
 
         return responseDto;
     }
@@ -100,6 +109,9 @@ public class CityServiceImpl implements CityService {
     public void deleteCity(Long cityId) throws ResourceNotFoundException {
 
         City city = getCityEntityById(cityId);
+
+        auditLogService.logEvent("Theatre", AuditAction.UPDATE, cityId , null);
+
         cityRepo.delete(city);
 
     }

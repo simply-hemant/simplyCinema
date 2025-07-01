@@ -14,10 +14,11 @@ public class AuditLogService {
 
     private final AuditLogRepo auditLogRepo;
 
-    public void logEvent(String tableName, AuditAction action, Long userId) {
+    public void logEvent(String tableName, AuditAction action, Long entityId, Long userId) {
         AuditLog log = AuditLog.builder()
                 .tableName(tableName)
                 .action(action)
+                .entityId(entityId)
                 .userId(userId) // ✅ Use the passed userId directly
                 .createdAt(LocalDateTime.now())
                 .build();
