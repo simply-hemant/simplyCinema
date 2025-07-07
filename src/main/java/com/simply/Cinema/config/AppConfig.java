@@ -56,14 +56,17 @@ public class AppConfig {
                                 "/api/reviews/**",               // read reviews
                                 "/api/bookings/guest",           // optional: guest booking
                                 "/swagger-ui/**",                // Swagger (optional)
-                                "/v3/api-docs/**"                // OpenAPI docs (optional)
+                                "/v3/api-docs/**",               // OpenAPI docs (optional)
+                                "/api/seats/**",
+                                "/api/screens/{screenId}",
+                                "/api/screens/{screenId}/summary"
                         ).permitAll()
 
                         // 🛡️ Role-based routes
                         .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/owner/**").hasAnyRole("THEATRE_OWNER", "ADMIN")
-                        .requestMatchers("/counter-staff/**").hasAnyRole("COUNTER_STAFF", "THEATRE_OWNER", "ADMIN")
-                        .requestMatchers("/customer/**").hasAnyRole("CUSTOMER", "COUNTER_STAFF", "THEATRE_OWNER", "ADMIN")
+                        .requestMatchers("/owner/**").hasAnyRole("THEATRE_OWNER")
+                        .requestMatchers("/counter-staff/**").hasAnyRole("COUNTER_STAFF", "THEATRE_OWNER")
+                        .requestMatchers("/customer/**").hasAnyRole("CUSTOMER")
 
                         // 🔐 All other `/api/**` endpoints require authentication
                         .requestMatchers("/api/**").authenticated()
@@ -111,7 +114,7 @@ public class AppConfig {
     }
 
     @Bean
-    public RestTemplate restTemplate(){
+    public RestTemplate restTemplate() {
         return new RestTemplate();
     }
 
@@ -124,16 +127,5 @@ public class AppConfig {
     public JwtTokenValidator jwtTokenValidator() {
         return new JwtTokenValidator(); // or return new JwtTokenValidator(deps);
     }
-
-    public class JacksonConfig {
-        @Bean
-        public ObjectMapper objectMapper() {
-            ObjectMapper mapper = new ObjectMapper();
-            mapper.findAndRegisterModules(); // Support for Java 8 DateTime, etc.
-            mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-            return mapper;
-        }
-    }
-
 
 }

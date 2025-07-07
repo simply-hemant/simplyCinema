@@ -12,6 +12,7 @@ import com.simply.Cinema.core.user.repository.UserRoleRepo;
 import com.simply.Cinema.exception.UserException;
 import com.simply.Cinema.response.AuthResponse;
 import com.simply.Cinema.security.jwt.JwtProvider;
+import com.simply.Cinema.service.UserDetailsServiceImpl;
 import com.simply.Cinema.service.auth.AuthService;
 import com.simply.Cinema.service.systemConfig.impl.AuditLogService;
 import com.simply.Cinema.validation.otp.OtpService;
@@ -24,6 +25,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -43,11 +45,12 @@ public class AuthServiceImpl implements AuthService {
     private final OtpVerificationRepo otpVerificationRepo;
     private final OtpService otpService;
     private final AuditLogService auditLogService;
+    private final UserDetailsServiceImpl userDetailsService;
 
     @Override
     public String createUser(UserRegistrationDto req) throws UserException {
 
-        if (userRepo.existsByEmail(req.getEmail())){
+        if (userRepo.existsByEmail(req.getEmail())) {
             throw new UserException("Email is already registered.");
         }
 
@@ -90,7 +93,7 @@ public class AuthServiceImpl implements AuthService {
         List<GrantedAuthority> authorities = new ArrayList<>();
         authorities.add(new SimpleGrantedAuthority(UserRoleEnum.ROLE_CUSTOMER.toString()));
 
-        String token = jwtProvider.generateTokenDirect(savedUser.getEmail(), List.of("ROLE_CUSTOMER"));
+        String token = jwtProvider.generateToken(savedUser);
 
         return token;
     }
@@ -99,43 +102,41 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse loginUser(UserLoginDto req) throws UserException {
 
         try {
-             //🔐 Authenticate the user using Spring Security
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword())
             );
 
-            // ✅ Generate JWT Token using JwtProvider
-            String token = jwtProvider.generateToken(authentication);
+            // Get UserDetails from authentication
+            User user = userRepo.findByEmail(req.getEmail())
+                    .orElseThrow(() -> new UserException("User not found"));
+
+            String token = jwtProvider.generateToken(user);
+
+            // Extract roles
+            List<UserRoleEnum> roles = new ArrayList<>();
+            for (UserRole userRole : user.getRoles()) {
+                roles.add(userRole.getRole());
+            }
 
             AuthResponse authResponse = new AuthResponse();
+
+            authResponse.setMessage("login success.");
+            authResponse.setRoles(roles);
             authResponse.setJwt(token);
-            authResponse.setMessage("Login success");
-
-            Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
-            String roleName=authorities.isEmpty()?null:authorities.iterator().next().getAuthority();
-
-          //  authResponse.setRole(UserRoleEnum.valueOf(roleName));
-
-            if (roleName != null && roleName.startsWith("ROLE_")) {
-                roleName = roleName.substring(5); // remove "ROLE_" prefix
-            }
-
-            // ✅ Set role in response
-            if (roleName != null) {
-                authResponse.setRole(UserRoleEnum.valueOf(roleName)); // Convert string to enum and set
-            }
 
             return authResponse;
 
-        } catch (Exception ex) {
+        } catch (Exception e) {
             throw new UserException("Invalid email or password.");
         }
+
     }
+
 
     @Override
     public void sendEmailOtpForSignup(String email) throws UserException, MessagingException {
 
-        if(userRepo.existsByEmail(email)){
+        if (userRepo.existsByEmail(email)) {
             throw new UserException("Email is already registered.");
         }
 
@@ -146,60 +147,62 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public String verifyEmailOtpAndRegister(UserRegistrationDto req) throws UserException {
 
-            OtpVerificationCode otpVerificationcode = otpVerificationRepo.findByEmail(req.getEmail());
+        OtpVerificationCode otpVerificationcode = otpVerificationRepo.findByEmail(req.getEmail());
 
-            if (otpVerificationcode == null)
-                throw new UserException("Wrong Otp.");
+        if (otpVerificationcode == null)
+            throw new UserException("Wrong Otp.");
 
-            if (otpVerificationcode.getExpiryTime().isBefore(LocalDateTime.now())) {
-                otpVerificationRepo.delete(otpVerificationcode);
-                throw new UserException("OTP has expired.");
-            }
-
-            if (otpVerificationcode.getAttempts() >= 5) {
-                otpVerificationRepo.delete(otpVerificationcode);
-                throw new UserException("Maximum OTP attempts exceeded.");
-            }
-
-            if (!otpVerificationcode.getOtp().equals(req.getOtp())) {
-                otpVerificationcode.setAttempts(otpVerificationcode.getAttempts() + 1);
-                otpVerificationRepo.save(otpVerificationcode);
-                throw new UserException("Invalid OTP.");
-            }
-
-            User createdUser = new User();
-            createdUser.setFirstName(req.getFirstName());
-            createdUser.setLastName(req.getLastName());
-            createdUser.setEmail(req.getEmail());
-
-            if (req.getDateOfBirth() != null) {
-                createdUser.setDateOfBirth(LocalDate.parse(req.getDateOfBirth()));
-            }
-
-            User  savedUser = userRepo.save(createdUser);
-
-            UserRole userRole = new UserRole();
-            userRole.setRole(UserRoleEnum.ROLE_CUSTOMER);
-            userRole.setAssignedAt(LocalDateTime.now());
-            userRole.setIsActive(true);
-
-            userRole.setUser(savedUser);
-
-            userRoleRepo.save(userRole);
-
+        if (otpVerificationcode.getExpiryTime().isBefore(LocalDateTime.now())) {
             otpVerificationRepo.delete(otpVerificationcode);
+            throw new UserException("OTP has expired.");
+        }
 
-            String token = jwtProvider.generateTokenDirect(createdUser.getEmail(), List.of("ROLE_CUSTOMER"));
+        if (otpVerificationcode.getAttempts() >= 5) {
+            otpVerificationRepo.delete(otpVerificationcode);
+            throw new UserException("Maximum OTP attempts exceeded.");
+        }
 
-            return token;
+        if (!otpVerificationcode.getOtp().equals(req.getOtp())) {
+            otpVerificationcode.setAttempts(otpVerificationcode.getAttempts() + 1);
+            otpVerificationRepo.save(otpVerificationcode);
+            throw new UserException("Invalid OTP.");
+        }
 
+        User createdUser = new User();
+        createdUser.setFirstName(req.getFirstName());
+        createdUser.setLastName(req.getLastName());
+        createdUser.setEmail(req.getEmail());
+
+        if (req.getDateOfBirth() != null) {
+            createdUser.setDateOfBirth(LocalDate.parse(req.getDateOfBirth()));
+        }
+
+        User savedUser = userRepo.save(createdUser);
+
+        UserRole userRole = new UserRole();
+        userRole.setRole(UserRoleEnum.ROLE_CUSTOMER);
+        userRole.setAssignedAt(LocalDateTime.now());
+        userRole.setIsActive(true);
+
+        userRole.setUser(savedUser);
+
+        userRoleRepo.save(userRole);
+
+        otpVerificationRepo.delete(otpVerificationcode);
+
+        String token = jwtProvider.generateTokenDirect(
+                savedUser.getEmail(),
+                List.of(UserRoleEnum.ROLE_CUSTOMER)
+        );
+
+        return token;
 
     }
 
     @Override
-    public void sendPhoneOtpForSignup(String phone) throws UserException, MessagingException  {
+    public void sendPhoneOtpForSignup(String phone) throws UserException, MessagingException {
 
-        if(userRepo.existsByPhone(phone)){
+        if (userRepo.existsByPhone(phone)) {
             throw new UserException("Email is already registered.");
         }
 
@@ -252,8 +255,10 @@ public class AuthServiceImpl implements AuthService {
 
         otpVerificationRepo.delete(otpVerificationcode);
 
-        String token = jwtProvider.generateTokenDirect(createdUser.getPhone(), List.of("ROLE_CUSTOMER"));
-
+        String token = jwtProvider.generateTokenDirect(
+                savedUser.getEmail(),
+                List.of(UserRoleEnum.ROLE_CUSTOMER)
+        );
         return token;
 
     }
@@ -262,7 +267,7 @@ public class AuthServiceImpl implements AuthService {
     public void sendEmailOtpForLogin(String email) throws UserException, MessagingException {
 
 
-        if(!userRepo.existsByEmail(email)){
+        if (!userRepo.existsByEmail(email)) {
             throw new UserException("Email is not registered.");
         }
 
@@ -304,21 +309,26 @@ public class AuthServiceImpl implements AuthService {
         user.setLastLoginAt(LocalDateTime.now());
         userRepo.save(user);
 
-        List<UserRole> userRoles = user.getRoles();
-        if (userRoles.isEmpty()) {
-            throw new UserException("User has no assigned roles.");
+        //Extract roles
+        List<UserRoleEnum> roles = new ArrayList<>();
+        for (UserRole r : user.getRoles()) {
+            if (r.getIsActive() != null && r.getIsActive()) {
+                roles.add(r.getRole());
+            }
         }
 
-        UserRoleEnum userRole = userRoles.get(0).getRole(); // Assuming one primary role
+        if (roles.isEmpty()) {
+            throw new UserException("User has no active roles.");
+        }
 
         // ✅ Generate JWT token
-        String token = jwtProvider.generateTokenDirect(user.getEmail(), List.of(userRole.toString()));
+        String token = jwtProvider.generateTokenDirect(user.getEmail(), roles);
 
         // ✅ Prepare Auth Response
         AuthResponse res = new AuthResponse();
         res.setJwt(token);
         res.setMessage("Login successful");
-        res.setRole(userRole);
+        res.setRoles(roles);
 
         return res;
 
@@ -368,45 +378,41 @@ public class AuthServiceImpl implements AuthService {
         user.setLastLoginAt(LocalDateTime.now());
         userRepo.save(user);
 
-        List<UserRole> userRoles = user.getRoles();
-        if (userRoles.isEmpty()) {
-            throw new UserException("User has no assigned roles.");
+        //Extract roles
+        List<UserRoleEnum> roles = new ArrayList<>();
+        for (UserRole r : user.getRoles()) {
+            if (r.getIsActive() != null && r.getIsActive()) {
+                roles.add(r.getRole());
+            }
         }
 
-        UserRoleEnum userRole = userRoles.get(0).getRole();
+        if (roles.isEmpty()) {
+            throw new UserException("User has no active roles.");
+        }
 
         // ✅ Generate JWT token
-        String token = jwtProvider.generateTokenDirect(user.getPhone(), List.of(userRole.toString()));
+        String token = jwtProvider.generateTokenDirect(user.getPhone(), roles);
 
         // ✅ Prepare Auth Response
         AuthResponse res = new AuthResponse();
         res.setJwt(token);
         res.setMessage("Login successful");
-        res.setRole(userRole);
+        res.setRoles(roles);
 
         return res;
 
     }
-    
-//
-//    private Authentication customAuthenticate(String email, String rawPassword) throws UserException {
-//
-//        UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
-//
-//        if (userDetails == null) {
-//            throw new UserException("User not found.");
-//        }
-//
-//        // ✅ Validate password (since you are handling normal login here)
-//        if (!passwordEncoder.matches(rawPassword, userDetails.getPassword())) {
-//            throw new UserException("Invalid password.");
-//        }
-//
-//        return new UsernamePasswordAuthenticationToken(
-//                userDetails,
-//                null,
-//                userDetails.getAuthorities()
-//        );
-//    }
+
+    private List<String> extractRoleNamesFromDB(String email) {
+        User user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return user.getRoles().stream()
+                .filter(UserRole::getIsActive)
+                .map(r -> r.getRole().name())
+                .distinct()
+                .toList();
+    }
+
 
 }

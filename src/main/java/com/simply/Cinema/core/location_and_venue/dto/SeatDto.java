@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 @Data
 public class SeatDto {
+
     private Long id;
     private Long screenId;
     private String rowNumber;

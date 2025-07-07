@@ -1,6 +1,7 @@
 package com.simply.Cinema.core.location_and_venue.entity;
 
 import com.simply.Cinema.core.location_and_venue.Enum.ScreenType;
+import com.simply.Cinema.core.location_and_venue.dto.LayoutConfig;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -30,8 +31,8 @@ public class Screen {
 
     private Integer totalSeats;
 
-    @Lob
-    private String layoutConfig; // Store seat map JSON or string
+//    @Column(columnDefinition = "TEXT")
+//    private String layoutConfig; // ✅ Stored as JSON in DB
 
     private Boolean isActive = true;
 

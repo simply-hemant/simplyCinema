@@ -12,7 +12,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -30,60 +29,48 @@ public class JwtTokenValidator extends OncePerRequestFilter {
     private UserRepo userRepo;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
-        // Read token from Authorization header
         String jwt = request.getHeader(JwtConstants.JWT_HEADER);
 
-        if (jwt != null && jwt.startsWith("Bearer "))
-        {
-            jwt = jwt.substring(7);                       // ✅ Remove the prefix
+        if (jwt != null && jwt.startsWith("Bearer ")) {
+            jwt = jwt.substring(7); // Remove "Bearer "
 
             try {
-                // Create secret key
                 SecretKey key = Keys.hmacShaKeyFor(JwtConstants.SECRET_KEY.getBytes());
 
-                // Parse token
                 Claims claims = Jwts.parserBuilder()
                         .setSigningKey(key)
                         .build()
                         .parseClaimsJws(jwt)
                         .getBody();
 
+                System.out.println("Subject:---------------------------------------------------------- " + claims.getSubject());
 
-                // Extract email and roles
-                String email = String.valueOf(claims.get("email" ));
-                String authorities = String.valueOf(claims.get("authorities"));
 
-                // Convert roles to Spring Security format
-                List<GrantedAuthority> auths = AuthorityUtils
-                        .commaSeparatedStringToAuthorityList(authorities);
 
-                // ✅ Fetch user by email
+                String email = claims.getSubject(); // ✅ correct
+                String roles = String.join(",", (List<String>) claims.get("roles")); // ✅ fix: roles not authorities
+
+                List<GrantedAuthority> authorities =
+                        AuthorityUtils.commaSeparatedStringToAuthorityList(roles);
+
                 User user = userRepo.findByEmail(email)
                         .orElseThrow(() -> new RuntimeException("User not found"));
 
-                // ✅ Wrap user in CustomUserDetails
                 CustomUserDetails userDetails = new CustomUserDetails(user);
 
-                // ✅ Create authentication token with CustomUserDetails as principal
                 UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, auths);
+                        new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
 
-//                // Create authentication object
-//                Authentication authentication = new UsernamePasswordAuthenticationToken(email, null, auths);
-
-                // Set authentication in Spring Security Context
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
             } catch (Exception e) {
-                //an avoid exceptions crashing the app during token parsing:
-                // Don't throw RuntimeException - just skip setting auth
                 logger.warn("Invalid token: " + e.getMessage());
             }
         }
-        // Continue to next filter or controller
-        filterChain.doFilter(request, response);
 
+        filterChain.doFilter(request, response);
     }
 }

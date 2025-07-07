@@ -12,7 +12,7 @@ public class ScreenDto {
     private Long theatreId;
     private ScreenType screenType;
     private Integer totalSeats;
-    private String layoutConfig; // JSON or string layout
+  //  private LayoutConfig layoutConfig; // JSON or string layout
     private Boolean isActive;
     private LocalDateTime createdAt;
 }

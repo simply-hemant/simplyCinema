@@ -1,11 +1,12 @@
 package com.simply.Cinema.security.jwt;
 
+import com.simply.Cinema.core.user.Enum.UserRoleEnum;
+import com.simply.Cinema.core.user.entity.User;
+import com.simply.Cinema.core.user.entity.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
@@ -14,83 +15,75 @@ import java.util.*;
 @Service
 public class JwtProvider {
 
-    SecretKey key = Keys.hmacShaKeyFor(JwtConstants.SECRET_KEY.getBytes());
+    // 24-hour expiration
+    private final long EXPIRATION_TIME = 1000 * 60 * 60 * 24;
 
-    // 🔹 Generate JWT Token
-    public String generateTokenDirect(String email, List<String> roles) {
-        String roleString = String.join(",", roles);
-
-        long EXPIRATION_TIME = 1000 * 60 * 60 * 24;  // 24 hours
-
-        return Jwts.builder()
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(new Date().getTime() + EXPIRATION_TIME))
-                .claim("email", email)
-                .claim("authorities", roleString)
-                .signWith(key, SignatureAlgorithm.HS256)
-                .compact();
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(JwtConstants.SECRET_KEY.getBytes());
     }
 
-    // 🔹 Generate JWT Token
-    public String generateToken(Authentication auth){
-        Collection<? extends GrantedAuthority> authorities = auth.getAuthorities();
-        String roles = populateAuthorities(authorities);
+    // ✅ Spring Flow: Email + Password
+    public String generateToken(User user) {
+        Map<String, Object> claims = new HashMap<>();
 
-        long EXPIRATION_TIME = 1000 * 60 * 60 * 24;  // 24 hours
-
-        return Jwts.builder()
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(new Date(). getTime() + EXPIRATION_TIME))
-                .claim("email", auth.getName())   // Add email in token
-                .claim("authorities", roles)      // Add roles in token
-                .signWith(key, SignatureAlgorithm.HS256) // Best Practice: Specify algorithm
-                .compact();
-    }
-
-//    private String populateAuthorities(Collection<? extends GrantedAuthority> authorities) {
-//
-//        Set<String> auths = new HashSet<>();
-//
-//        for(GrantedAuthority authority : authorities){
-//            auths.add(authority.getAuthority());  // Extract role name
-//        }
-//
-//        return String.join(",", auths); // Combines all roles into a single comma-separated string
-//
-//    }
-
-    private String populateAuthorities(Collection<? extends GrantedAuthority> authorities) {
-        Set<String> auths = new HashSet<>();
-
-        for (GrantedAuthority authority : authorities) {
-            String raw = authority.getAuthority();
-            // ✅ Remove "ROLE_" prefix if present
-            if (raw.startsWith("ROLE_")) {
-                raw = raw.substring(5);
+        List<String> roleNames = new ArrayList<>();
+        for (UserRole role : user.getRoles()) {
+            if (Boolean.TRUE.equals(role.getIsActive())) {
+                roleNames.add(role.getRole().name()); // e.g., "ROLE_CUSTOMER"
             }
-            auths.add(raw);
         }
 
-        return String.join(",", auths); // e.g. "ADMIN,THEATRE_OWNER"
+        claims.put("roles", roleNames);       // ✅ correct claim key
+        claims.put("userId", user.getId());
+
+        return Jwts.builder()
+                .setSubject(user.getEmail())                // ✅ this is your "email"
+                .addClaims(claims)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256) // explicitly use HS256
+                .compact();
+    }
+
+    public String generateTokenDirect(String subject, List<UserRoleEnum> roles) {
+        Map<String, Object> claims = new HashMap<>();
+
+        // Convert enums to strings
+        List<String> roleNames = new ArrayList<>();
+        for (UserRoleEnum role : roles) {
+            roleNames.add(role.name()); // e.g., "ROLE_CUSTOMER"
+        }
+
+        claims.put("roles", roleNames);
+        claims.put("loginType", "OTP"); // Optional: mark this as OTP login
+
+        return Jwts.builder()
+                .setSubject(subject) // subject = email or phone
+                .addClaims(claims)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME)) // 1 hour
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256) // explicitly use HS256
+                .compact();
     }
 
 
-    public String getEmailFromJwtToken(String jwt){
-        if(jwt != null && jwt.startsWith("Bearer ")){
+
+    public String getEmailFromJwtToken(String jwt) {
+        if (jwt != null && jwt.startsWith("Bearer ")) {
             jwt = jwt.substring(7);
-        }
-        else{
+        } else {
             throw new IllegalArgumentException("Invalid Token Format");
         }
 
         Claims claims = Jwts.parserBuilder()
-                .setSigningKey(key)
+                .setSigningKey(getSigningKey())
                 .build()
                 .parseClaimsJws(jwt)
                 .getBody();
 
-        return String.valueOf(claims.get("email"));
-
+        return claims.getSubject(); // This gives you the email
     }
+
+
 
 }

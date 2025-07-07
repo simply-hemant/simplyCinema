@@ -13,6 +13,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth")
@@ -29,7 +32,12 @@ public class AuthController {
         AuthResponse res = new AuthResponse();
         res.setJwt(jwt);
         res.setMessage("register success");
-        res.setRole(UserRoleEnum.ROLE_CUSTOMER);
+      //  res.setRole(UserRoleEnum.ROLE_CUSTOMER);
+
+        List<UserRoleEnum> roles = new ArrayList<>();
+        roles.add(UserRoleEnum.ROLE_CUSTOMER);
+        res.setRoles(roles); // 🔁 not setRole()
+
 
         return ResponseEntity.ok(res);
     }
@@ -86,7 +94,7 @@ public class AuthController {
 
         AuthResponse res = new AuthResponse();
         res.setMessage("register success");
-        res.setRole(UserRoleEnum.ROLE_CUSTOMER);
+        res.setRoles(List.of(UserRoleEnum.ROLE_CUSTOMER));
 
         return ResponseEntity.ok(res);
 
