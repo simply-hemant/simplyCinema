@@ -51,7 +51,7 @@ public class SeatController{
         return ResponseEntity.ok(seatLayoutDto);
     }
 
-    @DeleteMapping("/seats/{seatId}")
+    @DeleteMapping("/{seatId}")
     @PreAuthorize("hasRole('THEATRE_OWNER')")
     public ResponseEntity<String> deleteSeat(@PathVariable Long seatId)
             throws ResourceNotFoundException, AuthorizationException {
@@ -75,10 +75,10 @@ public class SeatController{
     }
 
 
-    @GetMapping("/layout/all")
-    public ResponseEntity<List<SeatLayoutDto>> getAllLayouts() {
-        return ResponseEntity.ok(seatService.getAllSeatLayouts());
-    }
+//    @GetMapping("/layout/all")
+//    public ResponseEntity<List<SeatLayoutDto>> getAllLayouts() {
+//        return ResponseEntity.ok(seatService.getAllSeatLayouts());
+//    }
 
     @GetMapping("/types")
     public ResponseEntity<List<SeatTypeDto>> getSeatTypes() {

@@ -1,5 +1,6 @@
 package com.simply.Cinema.service.location_and_venue.impl;
 
+import com.simply.Cinema.core.location_and_venue.Enum.SeatType;
 import com.simply.Cinema.core.location_and_venue.dto.*;
 import com.simply.Cinema.core.location_and_venue.entity.Screen;
 import com.simply.Cinema.core.location_and_venue.entity.Seat;
@@ -145,6 +146,7 @@ public class ScreenServiceImpl implements ScreenService {
         responseDto.setTotalSeats(Existingscreen.getTotalSeats());
         responseDto.setIsActive(Existingscreen.getIsActive());
         responseDto.setCreatedAt(Existingscreen.getCreatedAt());
+        responseDto.setTheatreName(Existingscreen.getTheatre().getName());
 
         return responseDto;
     }
@@ -209,72 +211,94 @@ public class ScreenServiceImpl implements ScreenService {
         Screen existingScreen = screenRepo.findById(screenId)
                 .orElseThrow(() -> new ResourceNotFoundException("Screen not found with id: "+screenId));
 
+        List<Seat> seats = seatRepo.findByScreenId(screenId);
 
-        //    int totalSeats = seatService.countTotalSeatsByScreenId(screenId);
-       //     int activeSeats = seatService.countActiveSeatsByScreenId(screenId);
-//        Map<SeatType, Integer> seatTypeCounts = seatService.getSeatTypeCounts(screenId);
+        int activeSeats = 0;
+        Map<SeatType, Integer> seatTypeCounts = new HashMap<>();
+
+        for (Seat seat : seats) {
+            // Count active seats
+            if (seat.getIsActive() != null && seat.getIsActive()) {
+                activeSeats++;
+            }
+
+            // Count seat types
+            SeatType type = seat.getSeatType();
+            if (type != null) {
+                if (seatTypeCounts.containsKey(type)) {
+                    seatTypeCounts.put(type, seatTypeCounts.get(type) + 1);
+                } else {
+                    seatTypeCounts.put(type, 1);
+                }
+            }
+        }
 
         ScreenSummaryDto dto = new ScreenSummaryDto();
 
         dto.setScreenId(existingScreen.getId());
         dto.setScreenName(existingScreen.getName());
-       // dto.setTotalSeats(totalSeats);
-       // dto.setActiveSeats(activeSeats);
-       // dto.setSeatTypeCounts(seatTypeCounts);
+        dto.setTotalSeats(existingScreen.getTotalSeats());
+        dto.setActiveSeats(activeSeats);
+        dto.setSeatTypeCounts(seatTypeCounts);
+
+        dto.setScreenType(String.valueOf(existingScreen.getScreenType()));
+        dto.setIsActive(existingScreen.getIsActive());
+        dto.setTheatreId(existingScreen.getTheatre().getId());
+        dto.setTheatreName(existingScreen.getTheatre().getName());
 
         return dto;
     }
 
-    @Override
-    public void assignSeatsToScreen(Long screenId, List<SeatDto> seats)
-            throws ResourceNotFoundException, ValidationException, BusinessException {
-
-        Screen screen = screenRepo.findById(screenId)
-                .orElseThrow(() -> new ResourceNotFoundException("Screen not found with id: " + screenId));
-
-        if (seats == null || seats.isEmpty()) {
-            throw new ValidationException("Seat list cannot be empty.");
-        }
-
-        //check for existing seats to avoid duplicates
-        List<Seat> existingSeats = seatRepo.findByScreenId(screenId);
-        Set<String> existingSeatNumbers = new HashSet<>();
-
-        for (Seat seat : existingSeats) {
-            String seatKey = seat.getRowNumber() + "-" + seat.getSeatNumber();
-            existingSeatNumbers.add(seatKey);
-        }
-
-
-        List<Seat> seatEntities = new ArrayList<>();
-
-        for (SeatDto dto : seats) {
-
-            // Validate seat data
-            if (dto.getRowNumber() == null || dto.getSeatNumber() == null || dto.getSeatType() == null) {
-                throw new ValidationException("Invalid seat details provided.");
-            }
-
-            String seatKey = dto.getRowNumber() + "-" + dto.getSeatNumber();
-            if (existingSeatNumbers.contains(seatKey)) {
-                throw new BusinessException("Seat already exists: " + seatKey);
-            }
-
-            Seat seat = new Seat();
-            seat.setScreen(screen);
-            seat.setRowNumber(dto.getRowNumber());
-            seat.setSeatNumber(dto.getSeatNumber());
-            seat.setSeatType(dto.getSeatType());
-            seat.setIsActive(true);
-            seatEntities.add(seat);
-        }
-
-        seatRepo.saveAll(seatEntities);
-
-        // Optional: update totalSeats in screen
-        screen.setTotalSeats(existingSeats.size() + seatEntities.size());
-        screenRepo.save(screen);
-    }
+//    @Override
+//    public void assignSeatsToScreen(Long screenId, List<SeatDto> seats)
+//            throws ResourceNotFoundException, ValidationException, BusinessException {
+//
+//        Screen screen = screenRepo.findById(screenId)
+//                .orElseThrow(() -> new ResourceNotFoundException("Screen not found with id: " + screenId));
+//
+//        if (seats == null || seats.isEmpty()) {
+//            throw new ValidationException("Seat list cannot be empty.");
+//        }
+//
+//        //check for existing seats to avoid duplicates
+//        List<Seat> existingSeats = seatRepo.findByScreenId(screenId);
+//        Set<String> existingSeatNumbers = new HashSet<>();
+//
+//        for (Seat seat : existingSeats) {
+//            String seatKey = seat.getRowNumber() + "-" + seat.getSeatNumber();
+//            existingSeatNumbers.add(seatKey);
+//        }
+//
+//
+//        List<Seat> seatEntities = new ArrayList<>();
+//
+//        for (SeatDto dto : seats) {
+//
+//            // Validate seat data
+//            if (dto.getRowNumber() == null || dto.getSeatNumber() == null || dto.getSeatType() == null) {
+//                throw new ValidationException("Invalid seat details provided.");
+//            }
+//
+//            String seatKey = dto.getRowNumber() + "-" + dto.getSeatNumber();
+//            if (existingSeatNumbers.contains(seatKey)) {
+//                throw new BusinessException("Seat already exists: " + seatKey);
+//            }
+//
+//            Seat seat = new Seat();
+//            seat.setScreen(screen);
+//            seat.setRowNumber(dto.getRowNumber());
+//            seat.setSeatNumber(dto.getSeatNumber());
+//            seat.setSeatType(dto.getSeatType());
+//            seat.setIsActive(true);
+//            seatEntities.add(seat);
+//        }
+//
+//        seatRepo.saveAll(seatEntities);
+//
+//        // Optional: update totalSeats in screen
+//        screen.setTotalSeats(existingSeats.size() + seatEntities.size());
+//        screenRepo.save(screen);
+//    }
 
     @Override
     public ScreenLayoutDto getScreenLayout(Long screenId) throws ResourceNotFoundException {

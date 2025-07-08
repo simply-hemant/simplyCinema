@@ -1,5 +1,6 @@
 package com.simply.Cinema.core.location_and_venue.dto;
 
+import com.simply.Cinema.core.location_and_venue.Enum.SeatType;
 import lombok.Data;
 
 import java.util.List;
@@ -11,5 +12,14 @@ public class SeatLayoutDto {
     private String layoutName;                    // Optional: Name of the layout
     private String createdBy;                     // Optional: Designer or staff who created it
 
-    private List<SeatDto> seats;                  // Actual seat configuration
+    private boolean autoGenerateSeats = true;
+
+    private Integer seatsPerRow; // e.g. 20
+
+    private Integer vipSeatCount;     // e.g. 10
+    private Integer premiumSeatCount; // e.g. 150
+    private Integer regularSeatCount; // e.g. 100
+
+    private List<SeatDto> seats; // optional in request
+
 }

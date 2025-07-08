@@ -25,7 +25,7 @@ public interface ScreenService {
 
     ScreenSummaryDto getScreenSummary(Long screenId) throws ResourceNotFoundException;
 
-    void assignSeatsToScreen(Long screenId, List<SeatDto> seats) throws ResourceNotFoundException, ValidationException, BusinessException;
+   // void assignSeatsToScreen(Long screenId, List<SeatDto> seats) throws ResourceNotFoundException, ValidationException, BusinessException;
 
     ScreenLayoutDto getScreenLayout(Long screenId) throws ResourceNotFoundException, ExternalServiceException;
 

@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 @Data
 public class ScreenDto {
+
     private Long id;
     private String name;
     private Long theatreId;
@@ -15,4 +16,7 @@ public class ScreenDto {
   //  private LayoutConfig layoutConfig; // JSON or string layout
     private Boolean isActive;
     private LocalDateTime createdAt;
+
+    private String theatreName;
+
 }

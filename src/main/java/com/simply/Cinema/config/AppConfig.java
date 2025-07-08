@@ -58,7 +58,7 @@ public class AppConfig {
                                 "/swagger-ui/**",                // Swagger (optional)
                                 "/v3/api-docs/**",               // OpenAPI docs (optional)
                                 "/api/seats/**",
-                                "/api/screens/{screenId}",
+                                "/api/screens/",
                                 "/api/screens/{screenId}/summary"
                         ).permitAll()
 
@@ -67,9 +67,6 @@ public class AppConfig {
                         .requestMatchers("/owner/**").hasAnyRole("THEATRE_OWNER")
                         .requestMatchers("/counter-staff/**").hasAnyRole("COUNTER_STAFF", "THEATRE_OWNER")
                         .requestMatchers("/customer/**").hasAnyRole("CUSTOMER")
-
-                        // 🔐 All other `/api/**` endpoints require authentication
-                        .requestMatchers("/api/**").authenticated()
 
                         // ✅ Allow everything else (like static files, home page)
                         .anyRequest().permitAll()

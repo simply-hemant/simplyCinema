@@ -21,7 +21,7 @@ public interface SeatService {
     // The purpose method is to retrieve a complete overview of seat layouts for every screen in the system.
     SeatLayoutDto getSeatLayoutByScreen(Long screenId) throws ResourceNotFoundException;
 
-    List<SeatLayoutDto> getAllSeatLayouts();
+ //   List<SeatLayoutDto> getAllSeatLayouts();
 
     // Seat type-related operations
     List<SeatTypeDto> getSeatTypes();
@@ -34,10 +34,8 @@ public interface SeatService {
 
     public void deleteSeat(Long seatId) throws ResourceNotFoundException, AuthorizationException;
 
-        // Capacity/Count operation
+    // Capacity/Count operation
     Integer getSeatCapacityByScreen(Long screenId) throws ResourceNotFoundException;
 
     boolean isSeatAvailable(Long seatId) throws ResourceNotFoundException;
-
-
 }

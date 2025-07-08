@@ -19,7 +19,7 @@ public class Seat {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "screen_id")
+    @JoinColumn(name = "screen_id", nullable = false)
     private Screen screen;
 
     private String rowNumber;
@@ -29,7 +29,12 @@ public class Seat {
     @Enumerated(EnumType.STRING)
     private SeatType seatType;
 
+    @Column(nullable = false)
     private Boolean isActive = true;
+
+//    // ✅ NEW FIELD: Used for booking status
+//    @Column(nullable = false)
+//    private Boolean isBooked = false;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

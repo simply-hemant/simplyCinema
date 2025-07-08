@@ -68,6 +68,7 @@ public class ScreenController {
     }
 
     @GetMapping("/{screenId}/summary")
+    @PreAuthorize("hasRole('THEATRE_OWNER')")
     public ResponseEntity<ScreenSummaryDto> getScreenSummary(@PathVariable Long screenId)
             throws ResourceNotFoundException {
         ScreenSummaryDto summary = screenService.getScreenSummary(screenId);
@@ -97,16 +98,16 @@ public class ScreenController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/{screenId}/assign-seats")
-    @PreAuthorize("hasRole('THEATRE_OWNER')")
-    public ResponseEntity<String> assignSeatsToScreen(
-            @PathVariable Long screenId,
-            @RequestBody List<SeatDto> seats
-    ) throws ResourceNotFoundException, ValidationException, BusinessException {
-
-        screenService.assignSeatsToScreen(screenId, seats);
-        return ResponseEntity.status(HttpStatus.CREATED).body("Seats assigned successfully.");
-    }
+//    @PostMapping("/{screenId}/assign-seats")
+//    @PreAuthorize("hasRole('THEATRE_OWNER')")
+//    public ResponseEntity<String> assignSeatsToScreen(
+//            @PathVariable Long screenId,
+//            @RequestBody List<SeatDto> seats
+//    ) throws ResourceNotFoundException, ValidationException, BusinessException {
+//
+//        screenService.assignSeatsToScreen(screenId, seats);
+//        return ResponseEntity.status(HttpStatus.CREATED).body("Seats assigned successfully.");
+//    }
 
     @GetMapping("/{screenId}/layout")
     public ResponseEntity<ScreenLayoutDto> getScreenLayout(
@@ -116,8 +117,5 @@ public class ScreenController {
         ScreenLayoutDto layout = screenService.getScreenLayout(screenId);
         return ResponseEntity.ok(layout);
     }
-
-
-
 
 }
