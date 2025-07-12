@@ -178,7 +178,8 @@ public class ReviewServiceImpl implements ReviewService{
             return 0.0;
         }
 
-        return avgRating;    }
+        return avgRating;
+    }
 
 
     @Override

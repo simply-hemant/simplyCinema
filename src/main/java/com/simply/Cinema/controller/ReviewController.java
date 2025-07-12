@@ -54,4 +54,11 @@ public class ReviewController {
         return ResponseEntity.ok(reviewService.moderateReview(id));
     }
 
+    @GetMapping("/{movieId}/average-rating")
+    public ResponseEntity<Double> getAverageRating(@PathVariable Long movieId) {
+        Double averageRating = reviewService.calculateAverageRating(movieId);
+        return ResponseEntity.ok(averageRating);
+    }
+
+
 }

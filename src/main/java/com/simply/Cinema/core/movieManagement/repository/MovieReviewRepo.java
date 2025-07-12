@@ -20,10 +20,13 @@ public interface MovieReviewRepo extends JpaRepository<MovieReview, Long> {
 
     boolean existsByUserIdAndMovieId(Long userId, Long movieId);
 
+
+    //calculate the average rating for a movie
     @Query("SELECT AVG(mr.rating) FROM MovieReview mr WHERE mr.movie.id = :movieId AND mr.isApproved = true")
     Double getAverageRating(Long movieId);
 
     @Query("SELECT COUNT(mr) FROM MovieReview mr WHERE mr.movie.id = :movieId AND mr.isApproved = true")
     Long getReviewCount(Long movieId);
+
 
 }
