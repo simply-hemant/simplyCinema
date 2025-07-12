@@ -12,5 +12,4 @@ public interface SeatRepo extends JpaRepository<Seat , Long> {
     List<Seat> findByScreenId(Long screenId);
 
 
-
 }

@@ -434,6 +434,10 @@ public class SeatServiceImpl implements SeatService {
 
         seatRepo.deleteAll(seats);
 
+        // ✅ Update screen's totalSeats to 0
+        screen.setTotalSeats(0);
+        screenRepo.save(screen);  // Save updated screen
+
         auditLogService.logEvent("seat_layout", AuditAction.DELETE, layoutId, currentUserId);
 
     }
@@ -601,23 +605,34 @@ public class SeatServiceImpl implements SeatService {
     }
 
     @Override
-    public void deleteSeat(Long seatId) throws ResourceNotFoundException, AuthorizationException {
-
+    public void deleteSeat(Long screenId, Long seatId) throws ResourceNotFoundException, AuthorizationException {
         Long currentUserId = SecurityUtil.getCurrentUserId();
 
         // Find the seat
         Seat seat = seatRepo.findById(seatId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seat not found with id: " + seatId));
 
-        //  Authorization check — only the theatre owner can delete
+        // Extra validation: check if seat belongs to the given screen
+        if (!seat.getScreen().getId().equals(screenId)) {
+            throw new AuthorizationException("Seat does not belong to the specified screen.");
+        }
+
+        // Authorization check — only the theatre owner can delete
         if (!seat.getScreen().getTheatre().getOwnerId().equals(currentUserId)) {
             throw new AuthorizationException("Access denied. You are not the owner of this seat's theatre.");
         }
 
+        // Delete seat
         seatRepo.deleteById(seatId);
 
-        auditLogService.logEvent("seat", AuditAction.DELETE, seatId, currentUserId);
+        // Update total seats in the screen
+        Screen screen = seat.getScreen();
+      //  int updatedSeatCount = seatRepo.countByScreenId(screen.getId());
+     //   screen.setTotalSeats(updatedSeatCount);
+        screenRepo.save(screen);
 
+        // Audit log
+        auditLogService.logEvent("seat", AuditAction.DELETE, seatId, currentUserId);
     }
 
 //    @Override
@@ -642,7 +657,9 @@ public class SeatServiceImpl implements SeatService {
     public boolean isSeatAvailable(Long seatId) throws ResourceNotFoundException {
         Seat seat = seatRepo.findById(seatId)
                 .orElseThrow(() -> new ResourceNotFoundException("Seat not found"));
+
         return seat.getIsActive();
+
     }
 
 
@@ -651,6 +668,8 @@ public class SeatServiceImpl implements SeatService {
         if (layoutDto.getSeatsPerRow() == null || layoutDto.getSeatsPerRow() <= 0) {
             throw new ValidationException("seatsPerRow must be provided and > 0.");
         }
+
+        // Uses Math.ceil() to ensure you round up in case of partial last row.
 
         int totalSeats = layoutDto.getVipSeatCount() + layoutDto.getPremiumSeatCount() + layoutDto.getRegularSeatCount();
         int seatsPerRow = layoutDto.getSeatsPerRow();
@@ -690,6 +709,9 @@ public class SeatServiceImpl implements SeatService {
         return generatedSeats;
     }
 
+    //Generates row labels for given number of rows.
+    //E.g., 0 → A, 1 → B, ..., 25 → Z, 26 → AA, 27 → AB, ..., 51 → AZ, 52 → BA
+
     private List<String> generateRowLabels(int count) {
         List<String> labels = new ArrayList<>();
         for (int i = 0; i < count; i++) {
@@ -703,8 +725,5 @@ public class SeatServiceImpl implements SeatService {
         }
         return labels;
     }
-
-
-
 
 }

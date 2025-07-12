@@ -98,24 +98,13 @@ public class ScreenController {
         return ResponseEntity.ok().build();
     }
 
-//    @PostMapping("/{screenId}/assign-seats")
-//    @PreAuthorize("hasRole('THEATRE_OWNER')")
-//    public ResponseEntity<String> assignSeatsToScreen(
-//            @PathVariable Long screenId,
-//            @RequestBody List<SeatDto> seats
-//    ) throws ResourceNotFoundException, ValidationException, BusinessException {
+//    @GetMapping("/{screenId}/layout")
+//    public ResponseEntity<ScreenLayoutDto> getScreenLayout(
+//            @PathVariable Long screenId
+//    ) throws ResourceNotFoundException {
 //
-//        screenService.assignSeatsToScreen(screenId, seats);
-//        return ResponseEntity.status(HttpStatus.CREATED).body("Seats assigned successfully.");
+//        ScreenLayoutDto layout = screenService.getScreenLayout(screenId);
+//        return ResponseEntity.ok(layout);
 //    }
-
-    @GetMapping("/{screenId}/layout")
-    public ResponseEntity<ScreenLayoutDto> getScreenLayout(
-            @PathVariable Long screenId
-    ) throws ResourceNotFoundException {
-
-        ScreenLayoutDto layout = screenService.getScreenLayout(screenId);
-        return ResponseEntity.ok(layout);
-    }
 
 }

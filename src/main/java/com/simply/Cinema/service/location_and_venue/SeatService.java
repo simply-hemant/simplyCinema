@@ -32,7 +32,7 @@ public interface SeatService {
 
     //void deleteSeatType(Long seatTypeId) throws ResourceNotFoundException;
 
-    public void deleteSeat(Long seatId) throws ResourceNotFoundException, AuthorizationException;
+    public void deleteSeat(Long screenId, Long seatId) throws ResourceNotFoundException, AuthorizationException;
 
     // Capacity/Count operation
     Integer getSeatCapacityByScreen(Long screenId) throws ResourceNotFoundException;

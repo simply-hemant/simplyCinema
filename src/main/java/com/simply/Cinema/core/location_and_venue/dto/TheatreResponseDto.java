@@ -1,5 +1,6 @@
 package com.simply.Cinema.core.location_and_venue.dto;
 
+import com.simply.Cinema.core.movieManagement.dto.MovieDto;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -24,5 +25,6 @@ public class TheatreResponseDto {
     private LocalTime closingHour;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
 
 }

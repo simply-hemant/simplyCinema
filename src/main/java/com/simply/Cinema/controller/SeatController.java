@@ -51,14 +51,16 @@ public class SeatController{
         return ResponseEntity.ok(seatLayoutDto);
     }
 
-    @DeleteMapping("/{seatId}")
-    @PreAuthorize("hasRole('THEATRE_OWNER')")
-    public ResponseEntity<String> deleteSeat(@PathVariable Long seatId)
-            throws ResourceNotFoundException, AuthorizationException {
-
-        seatService.deleteSeat(seatId);
-        return ResponseEntity.ok("Seat deleted successfully.");
-    }
+//    @DeleteMapping("/screen/{screenId}/seat/{seatId}")
+//    @PreAuthorize("hasRole('THEATRE_OWNER')")
+//    public ResponseEntity<String> deleteSeat(
+//            @PathVariable Long screenId,
+//            @PathVariable Long seatId)
+//            throws ResourceNotFoundException, AuthorizationException {
+//
+//        seatService.deleteSeat(seatId);
+//        return ResponseEntity.ok("Seat deleted successfully.");
+//    }
 
     @DeleteMapping("/layout/{layoutId}")
     @PreAuthorize("hasRole('THEATRE_OWNER')")
@@ -100,7 +102,7 @@ public class SeatController{
     }
 
     @GetMapping("/capacity/{screenId}")
-    public ResponseEntity<Integer> getSeatCapacity(@PathVariable Long screenId) throws ResourceNotFoundException {
+    public ResponseEntity<Integer> getSeatCapacityByScreen(@PathVariable Long screenId) throws ResourceNotFoundException {
         return ResponseEntity.ok(seatService.getSeatCapacityByScreen(screenId));
     }
 }
