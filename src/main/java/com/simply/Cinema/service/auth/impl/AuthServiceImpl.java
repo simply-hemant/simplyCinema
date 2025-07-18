@@ -403,16 +403,21 @@ public class AuthServiceImpl implements AuthService {
 
     }
 
-    private List<String> extractRoleNamesFromDB(String email) {
-        User user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    @Override
+    public void logout(String token) {
 
-        return user.getRoles().stream()
-                .filter(UserRole::getIsActive)
-                .map(r -> r.getRole().name())
-                .distinct()
-                .toList();
     }
+
+//    private List<String> extractRoleNamesFromDB(String email) {
+//        User user = userRepo.findByEmail(email)
+//                .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//        return user.getRoles().stream()
+//                .filter(UserRole::getIsActive)
+//                .map(r -> r.getRole().name())
+//                .distinct()
+//                .toList();
+//    }
 
 
 }

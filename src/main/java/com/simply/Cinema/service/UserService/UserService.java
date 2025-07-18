@@ -12,7 +12,7 @@ public interface UserService {
 
     User updateUserProfile(Long userId, UserProfileDto dto) throws UserException;
 
-    User getUserById(Long userId) throws UserException;
+    UserProfileDto getUserById(Long userId) throws UserException;
 
     void deleteUser(Long userId) throws UserException;
 

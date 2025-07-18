@@ -16,7 +16,7 @@ import java.util.*;
 public class JwtProvider {
 
     // 24-hour expiration
-    private final long EXPIRATION_TIME = 1000 * 60 * 60 * 24;
+    private final long EXPIRATION_TIME = 1000 * 60 * 60 * 24 * 1000;
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(JwtConstants.SECRET_KEY.getBytes());

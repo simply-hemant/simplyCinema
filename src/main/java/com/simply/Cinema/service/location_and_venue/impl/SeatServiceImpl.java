@@ -163,14 +163,11 @@ public class SeatServiceImpl implements SeatService {
         response.setCreatedBy(String.valueOf(currentUserId));
         response.setSeats(seatDtoList);
 
-
-        // Include metadata (if autoGenerate was used)
         response.setAutoGenerateSeats(layoutDto.isAutoGenerateSeats());
         response.setSeatsPerRow(layoutDto.getSeatsPerRow());
         response.setVipSeatCount(layoutDto.getVipSeatCount());
         response.setPremiumSeatCount(layoutDto.getPremiumSeatCount());
         response.setRegularSeatCount(layoutDto.getRegularSeatCount());
-
 
         // ✅ Audit log
         auditLogService.logEvent("seat_layout", AuditAction.CREATE, screenId, currentUserId);

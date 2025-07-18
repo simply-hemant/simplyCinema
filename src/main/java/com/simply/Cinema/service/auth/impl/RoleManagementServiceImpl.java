@@ -26,7 +26,6 @@ public class RoleManagementServiceImpl implements RoleManagementService {
 
     @Override
     public void assignRole(Long userId, String roleName) throws UserException {
-
         // 🔐 Get current authenticated user's email
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String adminEmail = auth.getName();
@@ -35,46 +34,56 @@ public class RoleManagementServiceImpl implements RoleManagementService {
         User admin = userRepo.findByEmail(adminEmail)
                 .orElseThrow(() -> new UserException("Admin not found"));
 
+        // ✅ Fetch target user
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new UserException("User not found with id: " + userId));
 
-        //convert string to enum
+        // 🎯 Convert String to Enum
         UserRoleEnum roleEnum;
         try {
             roleEnum = UserRoleEnum.valueOf(roleName.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid role: " + roleName);
+            throw new UserException("Invalid role: " + roleName);
         }
 
-        // ❌ Prevent duplicate role assignment
+        // 🔁 Check if role already exists (soft-deleted or active)
         for (UserRole existingRole : user.getRoles()) {
             if (existingRole.getRole() == roleEnum) {
-                throw new UserException("User already has role: " + roleName);
+                if (Boolean.FALSE.equals(existingRole.getIsActive())) {
+                    // ✅ Reactivate soft-deleted role
+                    existingRole.setIsActive(true);
+                    existingRole.setAssignedBy(admin.getId());
+                    userRoleRepo.save(existingRole);
+                    return;
+                } else {
+                    // ❌ Already assigned
+                    throw new UserException("User already has role: " + roleName);
+                }
             }
         }
 
+        // 🆕 Assign new role
         UserRole newUserRole = new UserRole();
         newUserRole.setUser(user);
         newUserRole.setRole(roleEnum);
         newUserRole.setAssignedBy(admin.getId());
+        newUserRole.setIsActive(true);
 
         user.getRoles().add(newUserRole);
         userRepo.save(user);
-
     }
+
 
     @Override
     public Set<String> getRolesByUser(Long userId) {
-
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new UserException("User not found with id " + userId));
 
         Set<String> roleNames = new HashSet<>();
-
-        List<UserRole> userRoles = user.getRoles();  // Assuming User has getRoles() mapped
+        List<UserRole> userRoles = user.getRoles();  // Assuming mapped properly
 
         for (UserRole userRole : userRoles) {
-            if (userRole.getIsActive() != null && userRole.getIsActive()) {
+            if (Boolean.TRUE.equals(userRole.getIsActive())) {
                 roleNames.add(userRole.getRole().name());
             }
         }
@@ -82,15 +91,19 @@ public class RoleManagementServiceImpl implements RoleManagementService {
     }
 
 
+        //soft delete
     @Override
     public void deleteRole(Long roleId) {
-
-        // ✅ Find the role by ID
         UserRole userRole = userRoleRepo.findById(roleId)
                 .orElseThrow(() -> new UserException("Role not found with ID: " + roleId));
 
-        // ✅ Delete the role
-        userRoleRepo.delete(userRole);
+        if (userRole.getRole() == UserRoleEnum.ROLE_ADMIN) {
+            throw new UserException("Cannot delete ADMIN role.");
+        }
+
+        userRole.setIsActive(false);
+        userRoleRepo.save(userRole);
     }
+
 
 }

@@ -1,4 +1,4 @@
-package com.simply.Cinema.service.movieManagement.impl;
+package com.simply.Cinema.service.movieManagement;
 
 import com.simply.Cinema.core.movieManagement.dto.MovieReviewDto;
 import com.simply.Cinema.exception.AuthorizationException;

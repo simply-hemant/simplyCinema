@@ -4,7 +4,7 @@ import com.simply.Cinema.core.movieManagement.dto.MovieReviewDto;
 import com.simply.Cinema.exception.AuthorizationException;
 import com.simply.Cinema.exception.ResourceNotFoundException;
 import com.simply.Cinema.exception.ValidationException;
-import com.simply.Cinema.service.movieManagement.impl.ReviewService;
+import com.simply.Cinema.service.movieManagement.ReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

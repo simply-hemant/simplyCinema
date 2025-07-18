@@ -104,6 +104,7 @@ public class UserController {
         return ResponseEntity.ok("Your account has been deleted successfully.");
     }
 
+
     //Get user bookings
     //Upload profile picture
 

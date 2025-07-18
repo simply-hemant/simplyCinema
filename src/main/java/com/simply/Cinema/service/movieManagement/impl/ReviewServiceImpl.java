@@ -10,6 +10,7 @@ import com.simply.Cinema.exception.AuthorizationException;
 import com.simply.Cinema.exception.BusinessException;
 import com.simply.Cinema.exception.ResourceNotFoundException;
 import com.simply.Cinema.exception.ValidationException;
+import com.simply.Cinema.service.movieManagement.ReviewService;
 import com.simply.Cinema.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,7 +21,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class ReviewServiceImpl implements ReviewService{
+public class ReviewServiceImpl implements ReviewService {
 
     private final MovieReviewRepo movieReviewRepo;
     private final MovieRepo movieRepo;

@@ -55,16 +55,16 @@ public class ScreenServiceImpl implements ScreenService {
             throw new BusinessException("A screen with the same name already exists int he theatre.");
         }
 
-        Screen screen = Screen.builder()
-                .name(screenDto.getName())
-                .screenType(screenDto.getScreenType())
-                .totalSeats(0)
-              //  .layoutConfig(layoutConfigJson) // store as JSON string
-                .isActive(true)
-                .theatre(theatre)
-                .build();
+        Screen screen = new Screen();
+        screen.setName(screenDto.getName());
+        screen.setScreenType(screenDto.getScreenType());
+        screen.setTotalSeats(0);
+        // screen.setLayoutConfig(layoutConfigJson); // store as JSON string (if used)
+        screen.setIsActive(true);
+        screen.setTheatre(theatre);
 
         Screen saved = screenRepo.save(screen);
+
 
         ScreenDto responseDto = new ScreenDto();
 
@@ -75,6 +75,7 @@ public class ScreenServiceImpl implements ScreenService {
         responseDto.setTotalSeats(saved.getTotalSeats());
         responseDto.setIsActive(saved.getIsActive());
         responseDto.setCreatedAt(saved.getCreatedAt());
+        responseDto.setTheatreName(saved.getTheatre().getName());
 
         auditLogService.logEvent("screen", AuditAction.CREATE, responseDto.getId(), currentUserId);
 
@@ -95,7 +96,7 @@ public class ScreenServiceImpl implements ScreenService {
 
         if (screenDto.getName() != null) screen.setName(screenDto.getName());
         if (screenDto.getScreenType() != null) screen.setScreenType(screenDto.getScreenType());
-        if (screenDto.getTotalSeats() != null) screen.setTotalSeats(screenDto.getTotalSeats());
+        //if (screenDto.getTotalSeats() != null) screen.setTotalSeats(screenDto.getTotalSeats());
         if (screenDto.getIsActive() != null) screen.setIsActive(screenDto.getIsActive());
 
         Screen updatedScreen = screenRepo.save(screen);
@@ -108,6 +109,7 @@ public class ScreenServiceImpl implements ScreenService {
         responseDto.setTotalSeats(updatedScreen.getTotalSeats());
         responseDto.setIsActive(updatedScreen.getIsActive());
         responseDto.setCreatedAt(updatedScreen.getCreatedAt());
+        responseDto.setTheatreName(updatedScreen.getTheatre().getName());
 
         auditLogService.logEvent("screen", AuditAction.UPDATE, screenId, currentUserId);
 

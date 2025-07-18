@@ -5,5 +5,6 @@ public enum AuditAction {
     UPDATE,
     DELETE,
     DEACTIVATE,
-    ACTIVATE
+    ACTIVATE,
+    CANCEL
 }

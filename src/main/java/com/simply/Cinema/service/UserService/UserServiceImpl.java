@@ -49,16 +49,39 @@ public class UserServiceImpl implements UserService {
         return userRepo.save(user);
     }
 
-    @Override
-    public User getUserById(Long userId) throws UserException {
 
-        return userRepo.findById(userId)
+    @Override
+    public UserProfileDto getUserById(Long userId) throws UserException {
+
+        User user = userRepo.findById(userId)
                 .orElseThrow(() -> new UserException("User not found with ID: " + userId));
+
+        UserProfileDto dto = new UserProfileDto();
+
+        dto.setId(user.getId());
+        dto.setFirstName(user.getFirstName());
+        dto.setLastName(user.getLastName());
+        dto.setPhone(user.getPhone());
+        dto.setEmail(user.getEmail());
+        dto.setGender(user.getGender());
+        dto.setLoyaltyPoints(user.getLoyaltyPoints());
+
+        List<String> roleNames = new ArrayList<>();
+
+        for (UserRole userRole : user.getRoles()) {
+            roleNames.add(userRole.getRole().name()); // Convert Enum to String
+        }
+
+        dto.setRoles(roleNames);
+
+        return dto;
+
     }
 
     @Override
     public void deleteUser(Long userId) throws UserException {
-        User user = getUserById(userId);
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new UserException("User not found with ID: " + userId));
         userRepo.delete(user);
     }
 

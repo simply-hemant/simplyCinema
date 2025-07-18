@@ -99,7 +99,6 @@ public class MovieServiceImpl implements MovieService {
         return mapToDto(savedMovie);
     }
 
-
     @Override
     public MovieDto updateMovie(Long movieId, MovieDto movieDto) throws ResourceNotFoundException, AuthorizationException {
 

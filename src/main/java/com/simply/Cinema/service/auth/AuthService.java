@@ -32,7 +32,10 @@ public interface AuthService {
      void sendPhoneOtpForLogin(String phone) throws UserException, MessagingException;
      AuthResponse loginWithPhoneOtp(OtpDto req) throws UserException;
 
-     //reset pass
+     //logout
+     void logout(String token);
+
+    //reset pass
 
     //forget password
 
