@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -32,5 +33,8 @@ public class ShowDto {
     private ShowStatus status;
 
     private LocalDateTime createdAt;
+
+    private Map<String, Double> seatPrices;
+
 }
 

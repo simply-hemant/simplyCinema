@@ -1,5 +1,6 @@
 package com.simply.Cinema.service.show_and_booking.Impl;
 
+import com.simply.Cinema.core.location_and_venue.Enum.SeatType;
 import com.simply.Cinema.core.location_and_venue.entity.Screen;
 import com.simply.Cinema.core.location_and_venue.entity.Seat;
 import com.simply.Cinema.core.location_and_venue.entity.Theatre;
@@ -8,25 +9,28 @@ import com.simply.Cinema.core.location_and_venue.repository.SeatRepo;
 import com.simply.Cinema.core.location_and_venue.repository.TheatreRepo;
 import com.simply.Cinema.core.movieManagement.entity.Movie;
 import com.simply.Cinema.core.movieManagement.repository.MovieRepo;
+import com.simply.Cinema.core.show_and_booking.Enum.ShowSeatStatus;
 import com.simply.Cinema.core.show_and_booking.Enum.ShowStatus;
 import com.simply.Cinema.core.show_and_booking.dto.ShowAvailabilityDto;
 import com.simply.Cinema.core.show_and_booking.dto.ShowDto;
 import com.simply.Cinema.core.show_and_booking.entity.Show;
+import com.simply.Cinema.core.show_and_booking.entity.ShowSeat;
 import com.simply.Cinema.core.show_and_booking.repository.ShowRepo;
+import com.simply.Cinema.core.show_and_booking.repository.ShowSeatRepo;
 import com.simply.Cinema.core.systemConfig.Enums.AuditAction;
 import com.simply.Cinema.core.user.entity.User;
 import com.simply.Cinema.core.user.repository.UserRepo;
 import com.simply.Cinema.exception.*;
+import com.simply.Cinema.service.show_and_booking.ShowSeatService;
 import com.simply.Cinema.service.show_and_booking.ShowService;
 import com.simply.Cinema.service.systemConfig.impl.AuditLogService;
 import com.simply.Cinema.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +43,7 @@ public class ShowServiceImpl implements ShowService {
     private final AuditLogService auditLogService;
     private final TheatreRepo theatreRepo;
     private final SeatRepo seatRepo;
+    private final ShowSeatRepo showSeatRepo;
 
     @Override
     public ShowDto createShow(ShowDto showDto) throws AuthenticationException, AuthorizationException, ValidationException, BusinessException, ResourceNotFoundException {
@@ -61,17 +66,12 @@ public class ShowServiceImpl implements ShowService {
         Screen screen = screenRepo.findById(showDto.getScreenId())
                 .orElseThrow(() -> new ResourceNotFoundException("Screen not found"));
 
-
         // check overlapping show time
         boolean isOverlapping = showRepo.existsByScreen_IdAndShowDateAndShowTime(
                 screen.getId(), showDto.getShowDate(), showDto.getShowTime());
 
         if (isOverlapping) {
             throw new BusinessException("A show already exists at this time on the selected screen");
-        }
-
-        if (showDto.getTotalSeats() > screen.getTotalSeats()) {
-            throw new BusinessException("Total seats exceed screen capacity");
         }
 
         // Create Show Entity
@@ -81,20 +81,64 @@ public class ShowServiceImpl implements ShowService {
         show.setShowDate(showDto.getShowDate());
         show.setShowTime(showDto.getShowTime());
         show.setEndTime(showDto.getEndTime());
-        show.setBasePrice(showDto.getBasePrice());
-        show.setDynamicPriceMultiplier(showDto.getDynamicPriceMultiplier());
-        show.setTotalSeats(showDto.getTotalSeats());
-        show.setAvailableSeats(showDto.getTotalSeats());
-        show.setStatus(ShowStatus.UPCOMING);
+        show.setTotalSeats(screen.getTotalSeats());
+
+        // ✅ Set base price from request
+        double basePrice = showDto.getBasePrice();
+        show.setBasePrice(basePrice);
+
+        // Set status if provided, otherwise default to UPCOMING
+        show.setStatus(showDto.getStatus() != null ? showDto.getStatus() : ShowStatus.UPCOMING);
+
         show.setCreatedBy(currentUserId);
         show.setCreatedAt(LocalDateTime.now());
         show.setUpdatedAt(LocalDateTime.now());
 
+        // ✅ Calculate dynamic multiplier based on day
+        DayOfWeek day = showDto.getShowDate().getDayOfWeek();
+        double multiplier = (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) ? 1.5 : 1.2;
+        show.setDynamicPriceMultiplier(multiplier);
+
         Show savedShow = showRepo.save(show);
+
         auditLogService.logEvent("show", AuditAction.CREATE, savedShow.getId(), currentUserId);
 
-        // Map to DTO and return
-        return convertToDto(savedShow);
+        List<Seat> seats = seatRepo.findByScreenId(show.getScreen().getId());
+        List<ShowSeat> showSeats = new ArrayList<>();
+
+        for (Seat seat : seats) {
+            double seatPrice = switch (seat.getSeatType()) {
+                case REGULAR -> basePrice * multiplier;
+                case PREMIUM -> basePrice * multiplier * 1.5;
+                case VIP -> basePrice * multiplier * 2.0;
+            };
+
+            ShowSeat showSeat = new ShowSeat();
+            showSeat.setShow(savedShow);
+            showSeat.setSeat(seat);
+            showSeat.setPrice(seatPrice);
+            showSeat.setStatus(ShowSeatStatus.AVAILABLE);
+            showSeat.setLockedUntil(null);
+            showSeat.setLockedByUserId(null);
+
+            showSeats.add(showSeat);
+        }
+        showSeatRepo.saveAll(showSeats);
+
+        // Set showDto values to return
+        ShowDto responseDto = new ShowDto();
+
+        responseDto.setId(savedShow.getId());
+        responseDto.setMovieId(movie.getId());
+        responseDto.setScreenId(screen.getId());
+        responseDto.setShowDate(show.getShowDate());
+        responseDto.setShowTime(show.getShowTime());
+        responseDto.setEndTime(show.getEndTime());
+        responseDto.setTotalSeats(show.getTotalSeats());
+        responseDto.setStatus(show.getStatus());
+        responseDto.setSeatPrices(showDto.getSeatPrices());
+
+        return responseDto;
     }
 
     @Override
@@ -103,16 +147,19 @@ public class ShowServiceImpl implements ShowService {
         Long currentUserId = SecurityUtil.getCurrentUserId();
 
         Show show = showRepo.findById(showId)
-                .orElseThrow(() -> new ResourceNotFoundException("show not found with id: "+showId));
+                .orElseThrow(() -> new ResourceNotFoundException("Show not found with id: " + showId));
 
-        // Validate date and time fields
+        // Validate required fields
         if (showDto.getShowDate() == null || showDto.getShowTime() == null || showDto.getEndTime() == null) {
             throw new ValidationException("Show date, time, and end time must not be null.");
         }
 
-        // Combine date and time to validate time window
+        // Validate show time window
         LocalDateTime startDateTime = LocalDateTime.of(showDto.getShowDate(), showDto.getShowTime());
         LocalDateTime endDateTime = LocalDateTime.of(showDto.getShowDate(), showDto.getEndTime());
+        if (!endDateTime.isAfter(startDateTime)) {
+            throw new ValidationException("End time must be after start time.");
+        }
 
         // Update basic fields
         show.setShowDate(showDto.getShowDate());
@@ -128,22 +175,57 @@ public class ShowServiceImpl implements ShowService {
         if (showDto.getStatus() != null)
             show.setStatus(showDto.getStatus());
 
-        // movie or screen can be updated
+        // Update movie
         if (showDto.getMovieId() != null && !showDto.getMovieId().equals(show.getMovie().getId())) {
             Movie movie = movieRepo.findById(showDto.getMovieId())
                     .orElseThrow(() -> new ResourceNotFoundException("Movie not found with id: " + showDto.getMovieId()));
             show.setMovie(movie);
         }
 
+        // Update screen
+        boolean screenChanged = false;
         if (showDto.getScreenId() != null && !showDto.getScreenId().equals(show.getScreen().getId())) {
             Screen screen = screenRepo.findById(showDto.getScreenId())
                     .orElseThrow(() -> new ResourceNotFoundException("Screen not found with id: " + showDto.getScreenId()));
             show.setScreen(screen);
+            screenChanged = true;
         }
 
+        // Save updated show
         Show updatedShow = showRepo.save(show);
 
-        auditLogService.logEvent("show", AuditAction.UPDATE, showDto.getId(), currentUserId);
+        // Delete old show seats if screen or pricing changed
+        if (screenChanged || showDto.getBasePrice() != null || showDto.getDynamicPriceMultiplier() != null) {
+            showSeatRepo.deleteById(showId);
+
+            List<Seat> seats = seatRepo.findByScreenId(show.getScreen().getId());
+
+            List<ShowSeat> newShowSeats = new ArrayList<>();
+            double basePrice = show.getBasePrice();
+            double multiplier = show.getDynamicPriceMultiplier();
+
+            for (Seat seat : seats) {
+                double seatPrice = switch (seat.getSeatType()) {
+                    case REGULAR -> basePrice * multiplier;
+                    case PREMIUM -> basePrice * multiplier * 1.5;
+                    case VIP -> basePrice * multiplier * 2.0;
+                };
+
+                ShowSeat showSeat = new ShowSeat();
+                showSeat.setShow(updatedShow);
+                showSeat.setSeat(seat);
+                showSeat.setPrice(seatPrice);
+                showSeat.setStatus(ShowSeatStatus.AVAILABLE);
+                showSeat.setLockedByUserId(null);
+                showSeat.setLockedUntil(null);
+
+                newShowSeats.add(showSeat);
+            }
+
+            showSeatRepo.saveAll(newShowSeats);
+        }
+
+        auditLogService.logEvent("show", AuditAction.UPDATE, updatedShow.getId(), currentUserId);
 
         return convertToDto(updatedShow);
     }
@@ -255,6 +337,9 @@ public class ShowServiceImpl implements ShowService {
 //    }
 
     private ShowDto convertToDto(Show show) {
+
+        ShowSeat showSeat = new ShowSeat();
+
         ShowDto dto = new ShowDto();
 
         dto.setId(show.getId());
@@ -263,12 +348,25 @@ public class ShowServiceImpl implements ShowService {
         dto.setShowDate(show.getShowDate());
         dto.setShowTime(show.getShowTime());
         dto.setEndTime(show.getEndTime());
-        dto.setBasePrice(show.getBasePrice());
-        dto.setDynamicPriceMultiplier(show.getDynamicPriceMultiplier());
         dto.setTotalSeats(show.getTotalSeats());
         dto.setAvailableSeats(show.getAvailableSeats());
         dto.setStatus(show.getStatus());
         dto.setCreatedAt(show.getCreatedAt());
+
+        // Set seatPrices using simple logic
+        Map<String, Double> seatPrices = new HashMap<>();
+
+        List<ShowSeat> showSeats = showSeatRepo.findByShow_Id(show.getId()); // Get show seats
+
+        for (ShowSeat seat : showSeats) {
+            String seatType = seat.getSeat().getSeatType().name(); // e.g., PREMIUM, REGULAR
+            Double price = seat.getPrice();
+
+            if (!seatPrices.containsKey(seatType)) {
+                seatPrices.put(seatType, price); // Add only once per type
+            }
+        }
+        dto.setSeatPrices(seatPrices);
 
         return dto;
     }
