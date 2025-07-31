@@ -44,6 +44,7 @@ public class ShowController {
     @PreAuthorize("hasRole('THEATRE_OWNER')")
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteShow(@PathVariable Long id) throws ResourceNotFoundException {
+
         showService.deleteShow(id);
         return ResponseEntity.ok("Show with ID " + id + " deleted successfully.");
     }
@@ -59,7 +60,7 @@ public class ShowController {
         return ResponseEntity.ok(showService.getShowsByMovie(movieId));
     }
 
-    @GetMapping("/theatres/{theatreId}")
+    @GetMapping("/theatres/{theatreId}  ")
     public ResponseEntity<List<ShowDto>> getShowsByTheatre(@PathVariable Long theatreId) {
         return ResponseEntity.ok(showService.getShowsByTheatre(theatreId));
     }

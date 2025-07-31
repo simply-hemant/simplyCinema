@@ -1,6 +1,5 @@
 package com.simply.Cinema.service.show_and_booking;
 
-import com.simply.Cinema.core.show_and_booking.dto.ShowAvailabilityDto;
 import com.simply.Cinema.core.show_and_booking.dto.ShowDto;
 import com.simply.Cinema.exception.*;
 
