@@ -3,6 +3,7 @@ package com.simply.Cinema.controller;
 import com.simply.Cinema.core.show_and_booking.dto.ShowAvailabilityDto;
 import com.simply.Cinema.core.show_and_booking.dto.ShowDto;
 import com.simply.Cinema.exception.ResourceNotFoundException;
+import com.simply.Cinema.response.ApiResponse;
 import com.simply.Cinema.service.show_and_booking.ShowService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -56,11 +57,19 @@ public class ShowController {
 //    }
 
     @GetMapping("/movies/{movieId}")
-    public ResponseEntity<List<ShowDto>> getShowsByMovie(@PathVariable Long movieId) {
-        return ResponseEntity.ok(showService.getShowsByMovie(movieId));
+    public ResponseEntity<?> getShowsByMovie(@PathVariable Long movieId) {
+        List<ShowDto> shows = showService.getShowsByMovie(movieId);
+
+        if (shows.isEmpty()) {
+            ApiResponse response = new ApiResponse("No shows found for movie ID: " + movieId, false);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+
+        return ResponseEntity.ok(shows);
     }
 
-    @GetMapping("/theatres/{theatreId}  ")
+
+    @GetMapping("/theatres/{theatreId}")
     public ResponseEntity<List<ShowDto>> getShowsByTheatre(@PathVariable Long theatreId) {
         return ResponseEntity.ok(showService.getShowsByTheatre(theatreId));
     }

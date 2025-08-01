@@ -45,6 +45,101 @@ public class ShowServiceImpl implements ShowService {
     private final SeatRepo seatRepo;
     private final ShowSeatRepo showSeatRepo;
 
+//    @Override
+//    public ShowDto createShow(ShowDto showDto) throws AuthenticationException, AuthorizationException, ValidationException, BusinessException, ResourceNotFoundException {
+//
+//        long currentUserId = SecurityUtil.getCurrentUserId();
+//
+//        User user = userRepo.findById(currentUserId)
+//                .orElseThrow(() -> new AuthenticationException("User not found"));
+//
+//        // Validate input DTO
+//        if (showDto.getMovieId() == null || showDto.getScreenId() == null ||
+//                showDto.getShowDate() == null || showDto.getShowTime() == null) {
+//            throw new ValidationException("Missing required show details");
+//        }
+//
+//        //. Fetch related entities
+//        Movie movie = movieRepo.findById(showDto.getMovieId())
+//                .orElseThrow(() -> new ResourceNotFoundException("Movie not found"));
+//
+//        Screen screen = screenRepo.findById(showDto.getScreenId())
+//                .orElseThrow(() -> new ResourceNotFoundException("Screen not found"));
+//
+//        // check overlapping show time
+//        boolean isOverlapping = showRepo.existsByScreen_IdAndShowDateAndShowTime(
+//                screen.getId(), showDto.getShowDate(), showDto.getShowTime());
+//
+//        if (isOverlapping) {
+//            throw new BusinessException("A show already exists at this time on the selected screen");
+//        }
+//
+//        // Create Show Entity
+//        Show show = new Show();
+//        show.setMovie(movie);
+//        show.setScreen(screen);
+//        show.setShowDate(showDto.getShowDate());
+//        show.setShowTime(showDto.getShowTime());
+//        show.setEndTime(showDto.getEndTime());
+//        show.setTotalSeats(screen.getTotalSeats());
+//
+//        // ✅ Set base price from request
+//        double basePrice = showDto.getBasePrice();
+//        show.setBasePrice(basePrice);
+//
+//        // Set status if provided, otherwise default to UPCOMING
+//        show.setStatus(showDto.getStatus() != null ? showDto.getStatus() : ShowStatus.UPCOMING);
+//
+//        show.setCreatedBy(currentUserId);
+//        show.setCreatedAt(LocalDateTime.now());
+//        show.setUpdatedAt(LocalDateTime.now());
+//
+//        // ✅ Calculate dynamic multiplier based on day
+//        DayOfWeek day = showDto.getShowDate().getDayOfWeek();
+//        double multiplier = (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) ? 1.5 : 1.2;
+//        show.setDynamicPriceMultiplier(multiplier);
+//
+//        Show savedShow = showRepo.save(show);
+//        auditLogService.logEvent("show", AuditAction.CREATE, savedShow.getId(), currentUserId);
+//
+//        List<Seat> seats = seatRepo.findByScreenId(show.getScreen().getId());
+//        List<ShowSeat> showSeats = new ArrayList<>();
+//
+//        for (Seat seat : seats) {
+//            double seatPrice = switch (seat.getSeatType()) {
+//                case REGULAR -> basePrice * multiplier;
+//                case PREMIUM -> basePrice * multiplier * 1.5;
+//                case VIP -> basePrice * multiplier * 2.0;
+//            };
+//
+//            ShowSeat showSeat = new ShowSeat();
+//            showSeat.setShow(savedShow);
+//            showSeat.setSeat(seat);
+//            showSeat.setPrice(seatPrice);
+//            showSeat.setStatus(ShowSeatStatus.AVAILABLE);
+//            showSeat.setLockedUntil(null);
+//            showSeat.setLockedByUserId(null);
+//
+//            showSeats.add(showSeat);
+//        }
+//        showSeatRepo.saveAll(showSeats);
+//
+//        // Set showDto values to return
+//        ShowDto responseDto = new ShowDto();
+//
+//        responseDto.setId(savedShow.getId());
+//        responseDto.setMovieId(movie.getId());
+//        responseDto.setScreenId(screen.getId());
+//        responseDto.setShowDate(show.getShowDate());
+//        responseDto.setShowTime(show.getShowTime());
+//        responseDto.setEndTime(show.getEndTime());
+//        responseDto.setTotalSeats(show.getTotalSeats());
+//        responseDto.setStatus(show.getStatus());
+//        responseDto.setSeatPrices(showDto.getSeatPrices());
+//
+//        return responseDto;
+//    }
+
     @Override
     public ShowDto createShow(ShowDto showDto) throws AuthenticationException, AuthorizationException, ValidationException, BusinessException, ResourceNotFoundException {
 
@@ -59,14 +154,18 @@ public class ShowServiceImpl implements ShowService {
             throw new ValidationException("Missing required show details");
         }
 
-        //. Fetch related entities
+        if (showDto.getSeatPrices() == null || showDto.getSeatPrices().isEmpty()) {
+            throw new ValidationException("Manual seat prices must be provided");
+        }
+
+        // Fetch related entities
         Movie movie = movieRepo.findById(showDto.getMovieId())
                 .orElseThrow(() -> new ResourceNotFoundException("Movie not found"));
 
         Screen screen = screenRepo.findById(showDto.getScreenId())
                 .orElseThrow(() -> new ResourceNotFoundException("Screen not found"));
 
-        // check overlapping show time
+        // Check overlapping show time
         boolean isOverlapping = showRepo.existsByScreen_IdAndShowDateAndShowTime(
                 screen.getId(), showDto.getShowDate(), showDto.getShowTime());
 
@@ -82,52 +181,43 @@ public class ShowServiceImpl implements ShowService {
         show.setShowTime(showDto.getShowTime());
         show.setEndTime(showDto.getEndTime());
         show.setTotalSeats(screen.getTotalSeats());
+        show.setBasePrice(showDto.getBasePrice()); // optional, just for record
 
-        // ✅ Set base price from request
-        double basePrice = showDto.getBasePrice();
-        show.setBasePrice(basePrice);
-
-        // Set status if provided, otherwise default to UPCOMING
         show.setStatus(showDto.getStatus() != null ? showDto.getStatus() : ShowStatus.UPCOMING);
-
         show.setCreatedBy(currentUserId);
         show.setCreatedAt(LocalDateTime.now());
         show.setUpdatedAt(LocalDateTime.now());
 
-        // ✅ Calculate dynamic multiplier based on day
-        DayOfWeek day = showDto.getShowDate().getDayOfWeek();
-        double multiplier = (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) ? 1.5 : 1.2;
-        show.setDynamicPriceMultiplier(multiplier);
+        // Do NOT set dynamic price multiplier (manual only)
 
         Show savedShow = showRepo.save(show);
-
         auditLogService.logEvent("show", AuditAction.CREATE, savedShow.getId(), currentUserId);
 
-        List<Seat> seats = seatRepo.findByScreenId(show.getScreen().getId());
+        // Manual seat pricing logic only
+        Map<SeatType, Double> manualSeatPrices = showDto.getSeatPrices();
+        List<Seat> seats = seatRepo.findByScreenId(screen.getId());
         List<ShowSeat> showSeats = new ArrayList<>();
 
         for (Seat seat : seats) {
-            double seatPrice = switch (seat.getSeatType()) {
-                case REGULAR -> basePrice * multiplier;
-                case PREMIUM -> basePrice * multiplier * 1.5;
-                case VIP -> basePrice * multiplier * 2.0;
-            };
+            Double price = manualSeatPrices.get(seat.getSeatType());
+            if (price == null) {
+                throw new ValidationException("Missing price for seat type: " + seat.getSeatType());
+            }
 
             ShowSeat showSeat = new ShowSeat();
             showSeat.setShow(savedShow);
             showSeat.setSeat(seat);
-            showSeat.setPrice(seatPrice);
+            showSeat.setPrice(price);
             showSeat.setStatus(ShowSeatStatus.AVAILABLE);
             showSeat.setLockedUntil(null);
             showSeat.setLockedByUserId(null);
-
             showSeats.add(showSeat);
         }
+
         showSeatRepo.saveAll(showSeats);
 
-        // Set showDto values to return
+        // Response DTO
         ShowDto responseDto = new ShowDto();
-
         responseDto.setId(savedShow.getId());
         responseDto.setMovieId(movie.getId());
         responseDto.setScreenId(screen.getId());
@@ -136,10 +226,101 @@ public class ShowServiceImpl implements ShowService {
         responseDto.setEndTime(show.getEndTime());
         responseDto.setTotalSeats(show.getTotalSeats());
         responseDto.setStatus(show.getStatus());
-        responseDto.setSeatPrices(showDto.getSeatPrices());
+        responseDto.setSeatPrices(manualSeatPrices);
+        responseDto.setCreatedAt(show.getCreatedAt());
+        responseDto.setBasePrice(show.getBasePrice());
 
         return responseDto;
     }
+
+//    @Override
+//    public ShowDto updateShow(Long showId, ShowDto showDto) throws AuthenticationException, AuthorizationException, ValidationException, BusinessException, ResourceNotFoundException {
+//
+//        Long currentUserId = SecurityUtil.getCurrentUserId();
+//
+//        Show show = showRepo.findById(showId)
+//                .orElseThrow(() -> new ResourceNotFoundException("Show not found with id: " + showId));
+//
+//        // Validate required fields
+//        if (showDto.getShowDate() == null || showDto.getShowTime() == null || showDto.getEndTime() == null) {
+//            throw new ValidationException("Show date, time, and end time must not be null.");
+//        }
+//
+//        // Validate show time window
+//        LocalDateTime startDateTime = LocalDateTime.of(showDto.getShowDate(), showDto.getShowTime());
+//        LocalDateTime endDateTime = LocalDateTime.of(showDto.getShowDate(), showDto.getEndTime());
+//        if (!endDateTime.isAfter(startDateTime)) {
+//            throw new ValidationException("End time must be after start time.");
+//        }
+//
+//        // Update basic fields
+//        show.setShowDate(showDto.getShowDate());
+//        show.setShowTime(showDto.getShowTime());
+//        show.setEndTime(showDto.getEndTime());
+//
+//        if (showDto.getBasePrice() != null)
+//            show.setBasePrice(showDto.getBasePrice());
+//
+//        if (showDto.getDynamicPriceMultiplier() != null)
+//            show.setDynamicPriceMultiplier(showDto.getDynamicPriceMultiplier());
+//
+//        if (showDto.getStatus() != null)
+//            show.setStatus(showDto.getStatus());
+//
+//        // Update movie
+//        if (showDto.getMovieId() != null && !showDto.getMovieId().equals(show.getMovie().getId())) {
+//            Movie movie = movieRepo.findById(showDto.getMovieId())
+//                    .orElseThrow(() -> new ResourceNotFoundException("Movie not found with id: " + showDto.getMovieId()));
+//            show.setMovie(movie);
+//        }
+//
+//        // Update screen
+//        boolean screenChanged = false;
+//        if (showDto.getScreenId() != null && !showDto.getScreenId().equals(show.getScreen().getId())) {
+//            Screen screen = screenRepo.findById(showDto.getScreenId())
+//                    .orElseThrow(() -> new ResourceNotFoundException("Screen not found with id: " + showDto.getScreenId()));
+//            show.setScreen(screen);
+//            screenChanged = true;
+//        }
+//
+//        // Save updated show
+//        Show updatedShow = showRepo.save(show);
+//
+//        // Delete old show seats if screen or pricing changed
+//        if (screenChanged || showDto.getBasePrice() != null || showDto.getDynamicPriceMultiplier() != null) {
+//            showSeatRepo.deleteById(showId);
+//
+//            List<Seat> seats = seatRepo.findByScreenId(show.getScreen().getId());
+//
+//            List<ShowSeat> newShowSeats = new ArrayList<>();
+//            double basePrice = show.getBasePrice();
+//            double multiplier = show.getDynamicPriceMultiplier();
+//
+//            for (Seat seat : seats) {
+//                double seatPrice = switch (seat.getSeatType()) {
+//                    case REGULAR -> basePrice * multiplier;
+//                    case PREMIUM -> basePrice * multiplier * 1.5;
+//                    case VIP -> basePrice * multiplier * 2.0;
+//                };
+//
+//                ShowSeat showSeat = new ShowSeat();
+//                showSeat.setShow(updatedShow);
+//                showSeat.setSeat(seat);
+//                showSeat.setPrice(seatPrice);
+//                showSeat.setStatus(ShowSeatStatus.AVAILABLE);
+//                showSeat.setLockedByUserId(null);
+//                showSeat.setLockedUntil(null);
+//
+//                newShowSeats.add(showSeat);
+//            }
+//
+//            showSeatRepo.saveAll(newShowSeats);
+//        }
+//
+//        auditLogService.logEvent("show", AuditAction.UPDATE, updatedShow.getId(), currentUserId);
+//
+//        return convertToDto(updatedShow);
+//    }
 
     @Override
     public ShowDto updateShow(Long showId, ShowDto showDto) throws AuthenticationException, AuthorizationException, ValidationException, BusinessException, ResourceNotFoundException {
@@ -149,41 +330,40 @@ public class ShowServiceImpl implements ShowService {
         Show show = showRepo.findById(showId)
                 .orElseThrow(() -> new ResourceNotFoundException("Show not found with id: " + showId));
 
-        // Validate required fields
-        if (showDto.getShowDate() == null || showDto.getShowTime() == null || showDto.getEndTime() == null) {
-            throw new ValidationException("Show date, time, and end time must not be null.");
+        boolean screenChanged = false;
+
+        // Optional: Update show date/time/endTime only if all are provided
+        if (showDto.getShowDate() != null && showDto.getShowTime() != null && showDto.getEndTime() != null) {
+            LocalDateTime startDateTime = LocalDateTime.of(showDto.getShowDate(), showDto.getShowTime());
+            LocalDateTime endDateTime = LocalDateTime.of(showDto.getShowDate(), showDto.getEndTime());
+
+            if (!endDateTime.isAfter(startDateTime)) {
+                throw new ValidationException("End time must be after start time.");
+            }
+
+            show.setShowDate(showDto.getShowDate());
+            show.setShowTime(showDto.getShowTime());
+            show.setEndTime(showDto.getEndTime());
         }
 
-        // Validate show time window
-        LocalDateTime startDateTime = LocalDateTime.of(showDto.getShowDate(), showDto.getShowTime());
-        LocalDateTime endDateTime = LocalDateTime.of(showDto.getShowDate(), showDto.getEndTime());
-        if (!endDateTime.isAfter(startDateTime)) {
-            throw new ValidationException("End time must be after start time.");
-        }
-
-        // Update basic fields
-        show.setShowDate(showDto.getShowDate());
-        show.setShowTime(showDto.getShowTime());
-        show.setEndTime(showDto.getEndTime());
-
-        if (showDto.getBasePrice() != null)
+        // Optional: Update base price
+        if (showDto.getBasePrice() != null) {
             show.setBasePrice(showDto.getBasePrice());
+        }
 
-        if (showDto.getDynamicPriceMultiplier() != null)
-            show.setDynamicPriceMultiplier(showDto.getDynamicPriceMultiplier());
-
-        if (showDto.getStatus() != null)
+        // Optional: Update status
+        if (showDto.getStatus() != null) {
             show.setStatus(showDto.getStatus());
+        }
 
-        // Update movie
+        // Optional: Update movie
         if (showDto.getMovieId() != null && !showDto.getMovieId().equals(show.getMovie().getId())) {
             Movie movie = movieRepo.findById(showDto.getMovieId())
                     .orElseThrow(() -> new ResourceNotFoundException("Movie not found with id: " + showDto.getMovieId()));
             show.setMovie(movie);
         }
 
-        // Update screen
-        boolean screenChanged = false;
+        // Optional: Update screen
         if (showDto.getScreenId() != null && !showDto.getScreenId().equals(show.getScreen().getId())) {
             Screen screen = screenRepo.findById(showDto.getScreenId())
                     .orElseThrow(() -> new ResourceNotFoundException("Screen not found with id: " + showDto.getScreenId()));
@@ -191,30 +371,35 @@ public class ShowServiceImpl implements ShowService {
             screenChanged = true;
         }
 
-        // Save updated show
+        // Save show before updating show seats
         Show updatedShow = showRepo.save(show);
 
-        // Delete old show seats if screen or pricing changed
-        if (screenChanged || showDto.getBasePrice() != null || showDto.getDynamicPriceMultiplier() != null) {
-            showSeatRepo.deleteById(showId);
+        // Update seats if screen changed or seatPrices are provided
+        if (screenChanged || showDto.getSeatPrices() != null) {
 
+            if (showDto.getSeatPrices() == null || showDto.getSeatPrices().isEmpty()) {
+                throw new ValidationException("Seat prices must be provided for manual pricing.");
+            }
+
+            // Delete existing show seats
+            showSeatRepo.deleteByShowId(showId);
+
+            // Fetch seats for the updated screen
             List<Seat> seats = seatRepo.findByScreenId(show.getScreen().getId());
 
             List<ShowSeat> newShowSeats = new ArrayList<>();
-            double basePrice = show.getBasePrice();
-            double multiplier = show.getDynamicPriceMultiplier();
 
             for (Seat seat : seats) {
-                double seatPrice = switch (seat.getSeatType()) {
-                    case REGULAR -> basePrice * multiplier;
-                    case PREMIUM -> basePrice * multiplier * 1.5;
-                    case VIP -> basePrice * multiplier * 2.0;
-                };
+                SeatType type = seat.getSeatType();
+                Double manualPrice = showDto.getSeatPrices().get(type);
+                if (manualPrice == null) {
+                    throw new ValidationException("Missing price for seat type: " + type);
+                }
 
                 ShowSeat showSeat = new ShowSeat();
                 showSeat.setShow(updatedShow);
                 showSeat.setSeat(seat);
-                showSeat.setPrice(seatPrice);
+                showSeat.setPrice(manualPrice);
                 showSeat.setStatus(ShowSeatStatus.AVAILABLE);
                 showSeat.setLockedByUserId(null);
                 showSeat.setLockedUntil(null);
@@ -295,12 +480,21 @@ public class ShowServiceImpl implements ShowService {
     }
 
     @Override
-    public List<ShowDto> getShowsByMovie(Long movieId) {
+    public List<ShowDto> getShowsByMovie(Long movieId) throws ResourceNotFoundException {
         List<Show> shows = showRepo.findByMovie_Id(movieId);
+
+        if (shows.isEmpty()) {
+            throw new ResourceNotFoundException("No shows found for movie ID: " + movieId);
+        }
+
         List<ShowDto> dtos = new ArrayList<>();
-        for (Show s : shows) dtos.add(convertToDto(s));
+        for (Show s : shows) {
+            dtos.add(convertToDto(s));
+        }
+
         return dtos;
     }
+
 
     @Override
     public void deleteShow(Long id) throws ResourceNotFoundException {
@@ -313,9 +507,13 @@ public class ShowServiceImpl implements ShowService {
         if (!show.getCreatedBy().equals(currentUserId)) {
             throw new AuthorizationException("You are not authorized to delete this show");
         }
-        auditLogService.logEvent("show", AuditAction.DELETE, id, currentUserId);
+
+        // ✅ Delete associated show seats first to avoid FK constraint violation
+        showSeatRepo.deleteByShowId(id);  // This must exist in your ShowSeatRepository
 
         showRepo.delete(show);
+
+        auditLogService.logEvent("show", AuditAction.DELETE, id, currentUserId);
     }
 
 //    @Override
@@ -354,7 +552,7 @@ public class ShowServiceImpl implements ShowService {
         dto.setCreatedAt(show.getCreatedAt());
 
         // Set seatPrices using simple logic
-        Map<String, Double> seatPrices = new HashMap<>();
+        Map<SeatType, Double> seatPrices = new HashMap<>();
 
         List<ShowSeat> showSeats = showSeatRepo.findByShow_Id(show.getId()); // Get show seats
 
@@ -363,7 +561,7 @@ public class ShowServiceImpl implements ShowService {
             Double price = seat.getPrice();
 
             if (!seatPrices.containsKey(seatType)) {
-                seatPrices.put(seatType, price); // Add only once per type
+                seatPrices.put(SeatType.valueOf(seatType), price); // Add only once per type
             }
         }
         dto.setSeatPrices(seatPrices);
