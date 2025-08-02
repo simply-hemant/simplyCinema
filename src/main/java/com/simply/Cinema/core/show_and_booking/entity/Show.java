@@ -4,7 +4,6 @@ import com.simply.Cinema.core.location_and_venue.entity.Screen;
 import com.simply.Cinema.core.movieManagement.entity.Movie;
 import com.simply.Cinema.core.show_and_booking.Enum.ShowStatus;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
