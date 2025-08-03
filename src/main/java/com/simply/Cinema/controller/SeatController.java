@@ -44,7 +44,7 @@ public class SeatController{
         return ResponseEntity.ok(updateLayout);
     }
 
-    @GetMapping("/{screenId}")
+    @GetMapping("/screen/{screenId}")
     public ResponseEntity<SeatLayoutDto> getSeatLayoutByScreen(@PathVariable Long screenId){
 
         SeatLayoutDto seatLayoutDto = seatService.getSeatLayoutByScreen(screenId);

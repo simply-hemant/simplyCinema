@@ -12,6 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ShowAvailabilityDto {
+
     private Long showId;
     private String movieTitle;
     private String screenName;

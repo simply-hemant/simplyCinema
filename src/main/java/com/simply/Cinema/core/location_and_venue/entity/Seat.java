@@ -23,7 +23,6 @@ public class Seat {
     private Screen screen;
 
     private String rowNumber;
-
     private String seatNumber;
 
     @Enumerated(EnumType.STRING)

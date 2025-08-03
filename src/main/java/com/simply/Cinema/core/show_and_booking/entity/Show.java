@@ -36,8 +36,8 @@ public class Show {
     private LocalTime showTime;
     private LocalTime endTime;
 
-    private Double basePrice;
-    private Double dynamicPriceMultiplier;
+   // private Double basePrice;
+   // private Double dynamicPriceMultiplier;
 
     private Integer totalSeats;
     private Integer availableSeats;

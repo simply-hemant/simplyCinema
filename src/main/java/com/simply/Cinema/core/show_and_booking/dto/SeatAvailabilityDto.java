@@ -10,11 +10,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SeatAvailabilityDto {
+
     private Long seatId;
     private String seatNumber;
     private String seatRow;
     private SeatType seatType;
-
     private Double price;
     private ShowSeatStatus status;
 }

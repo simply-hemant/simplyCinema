@@ -11,17 +11,19 @@ import com.simply.Cinema.core.movieManagement.entity.Movie;
 import com.simply.Cinema.core.movieManagement.repository.MovieRepo;
 import com.simply.Cinema.core.show_and_booking.Enum.ShowSeatStatus;
 import com.simply.Cinema.core.show_and_booking.Enum.ShowStatus;
+import com.simply.Cinema.core.show_and_booking.dto.SeatAvailabilityDto;
 import com.simply.Cinema.core.show_and_booking.dto.ShowAvailabilityDto;
 import com.simply.Cinema.core.show_and_booking.dto.ShowDto;
 import com.simply.Cinema.core.show_and_booking.entity.Show;
 import com.simply.Cinema.core.show_and_booking.entity.ShowSeat;
+import com.simply.Cinema.core.show_and_booking.repository.BookingSeatRepo;
 import com.simply.Cinema.core.show_and_booking.repository.ShowRepo;
 import com.simply.Cinema.core.show_and_booking.repository.ShowSeatRepo;
 import com.simply.Cinema.core.systemConfig.Enums.AuditAction;
 import com.simply.Cinema.core.user.entity.User;
 import com.simply.Cinema.core.user.repository.UserRepo;
 import com.simply.Cinema.exception.*;
-import com.simply.Cinema.service.show_and_booking.ShowSeatService;
+import com.simply.Cinema.service.show_and_booking.SeatLockService;
 import com.simply.Cinema.service.show_and_booking.ShowService;
 import com.simply.Cinema.service.systemConfig.impl.AuditLogService;
 import com.simply.Cinema.util.SecurityUtil;
@@ -44,6 +46,8 @@ public class ShowServiceImpl implements ShowService {
     private final TheatreRepo theatreRepo;
     private final SeatRepo seatRepo;
     private final ShowSeatRepo showSeatRepo;
+    private final SeatLockService seatLockService;
+    private final BookingSeatRepo bookingSeatRepo;
 
 //    @Override
 //    public ShowDto createShow(ShowDto showDto) throws AuthenticationException, AuthorizationException, ValidationException, BusinessException, ResourceNotFoundException {
@@ -181,7 +185,7 @@ public class ShowServiceImpl implements ShowService {
         show.setShowTime(showDto.getShowTime());
         show.setEndTime(showDto.getEndTime());
         show.setTotalSeats(screen.getTotalSeats());
-        show.setBasePrice(showDto.getBasePrice()); // optional, just for record
+//        show.setBasePrice(showDto.getBasePrice()); // optional, just for record
 
         show.setStatus(showDto.getStatus() != null ? showDto.getStatus() : ShowStatus.UPCOMING);
         show.setCreatedBy(currentUserId);
@@ -228,7 +232,7 @@ public class ShowServiceImpl implements ShowService {
         responseDto.setStatus(show.getStatus());
         responseDto.setSeatPrices(manualSeatPrices);
         responseDto.setCreatedAt(show.getCreatedAt());
-        responseDto.setBasePrice(show.getBasePrice());
+//        responseDto.setBasePrice(show.getBasePrice());
 
         return responseDto;
     }
@@ -347,9 +351,9 @@ public class ShowServiceImpl implements ShowService {
         }
 
         // Optional: Update base price
-        if (showDto.getBasePrice() != null) {
-            show.setBasePrice(showDto.getBasePrice());
-        }
+//        if (showDto.getBasePrice() != null) {
+//            show.setBasePrice(showDto.getBasePrice());
+//        }
 
         // Optional: Update status
         if (showDto.getStatus() != null) {
@@ -515,9 +519,10 @@ public class ShowServiceImpl implements ShowService {
 
         auditLogService.logEvent("show", AuditAction.DELETE, id, currentUserId);
     }
-
+//
 //    @Override
-//    public ShowAvailabilityDto getShowAvailability(Long showId) throws AuthenticationException, AuthorizationException, ResourceNotFoundException, SeatLockException {
+//    public ShowAvailabilityDto getShowAvailability(Long showId)
+//            throws AuthenticationException, AuthorizationException, ResourceNotFoundException, SeatLockException {
 //
 //        Show show = showRepo.findById(showId)
 //                .orElseThrow(() -> new ResourceNotFoundException("Show not found with id: " + showId));
@@ -527,12 +532,41 @@ public class ShowServiceImpl implements ShowService {
 //            throw new ResourceNotFoundException("Screen not associated with this show");
 //        }
 //
-//        List<Seat> allSeats = seatRepo.findByScreenId(screen.getId()); // Assume this method exists
+//        List<Seat> allSeats = seatRepo.findByScreenId(screen.getId());
 //
-//        List<Long> bookedSeatIds = seatBookingRepo.findBookedSeatIdsByShowId(showId); // custom query
+//        List<Long> bookedSeatIds = seatBookingRepo.findBookedSeatIdsByShowId(showId);
 //
-//        return null;
+//        // Get currently locked seats from Redis (SeatLockService)
+//        List<String> lockedSeatIds = seatLockService.getLockedSeats(showId); // returns seatIds
+//
+//        List<SeatAvailabilityDto> seatAvailabilityList = new ArrayList<>();
+//
+//        for (Seat seat : allSeats) {
+//            String status;
+//            if (bookedSeatIds.contains(seat.getId())) {
+//                status = "BOOKED";
+//            } else if (lockedSeatIds.contains(seat.getId())) {
+//                status = "LOCKED";
+//            } else {
+//                status = "AVAILABLE";
+//            }
+//
+//            SeatAvailabilityDto seatAvailabilityDto = new SeatAvailabilityDto();
+//            seatAvailabilityDto.setSeatId(seat.getId());
+//            seatAvailabilityDto.setSeatNumber(seat.getSeatNumber());
+//            seatAvailabilityDto.setSeatType(seat.getSeatType());
+//            seatAvailabilityDto.setStatus(ShowSeatStatus.valueOf(status));
+//
+//            seatAvailabilityList.add(seatAvailabilityDto);
+//        }
+//
+//        ShowAvailabilityDto dto = new ShowAvailabilityDto();
+//        dto.setShowId(showId);
+//        dto.setAvailableSeats(seatAvailabilityList);
+//
+//        return dto;
 //    }
+//
 
     private ShowDto convertToDto(Show show) {
 
