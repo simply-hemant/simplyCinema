@@ -37,4 +37,10 @@ public class SeatLockController {
         return ResponseEntity.ok(isLocked);
     }
 
+    @GetMapping("/locked")
+    public ResponseEntity<List<String>> getLockedSeats(@RequestParam Long showId) {
+        List<String> lockedSeats = seatLockService.getLockedSeats(showId);
+        return ResponseEntity.ok(lockedSeats);
+    }
+
 }

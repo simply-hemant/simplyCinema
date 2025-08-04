@@ -519,7 +519,7 @@ public class ShowServiceImpl implements ShowService {
 
         auditLogService.logEvent("show", AuditAction.DELETE, id, currentUserId);
     }
-//
+
 //    @Override
 //    public ShowAvailabilityDto getShowAvailability(Long showId)
 //            throws AuthenticationException, AuthorizationException, ResourceNotFoundException, SeatLockException {
@@ -566,7 +566,7 @@ public class ShowServiceImpl implements ShowService {
 //
 //        return dto;
 //    }
-//
+
 
     private ShowDto convertToDto(Show show) {
 

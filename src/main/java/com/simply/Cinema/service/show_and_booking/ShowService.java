@@ -26,9 +26,7 @@ public interface ShowService {
 
     void deleteShow(Long id) throws ResourceNotFoundException;
 
-
-
-    ShowAvailabilityDto getShowAvailability(Long showId)
-            throws AuthenticationException, AuthorizationException, ResourceNotFoundException, SeatLockException;
+//    ShowAvailabilityDto getShowAvailability(Long showId)
+//            throws AuthenticationException, AuthorizationException, ResourceNotFoundException, SeatLockException;
 
 }
