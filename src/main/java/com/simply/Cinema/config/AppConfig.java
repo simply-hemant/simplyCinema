@@ -55,11 +55,12 @@ public class AppConfig {
                                 "/api/content/**",               // recommendations, trending
                                 "/api/reviews/**",               // read reviews
                                 "/api/bookings/guest",           // optional: guest booking
-                                "/swagger-ui/**",                // Swagger (optional)
-                                "/v3/api-docs/**",               // OpenAPI docs (optional)
                                 "/api/seats/**",
                                 "/api/screens/",
-                                "/api/screens/{screenId}/summary"
+                                "/api/screens/{screenId}/summary",
+
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
                         ).permitAll()
 
                         // 🛡️ Role-based routes

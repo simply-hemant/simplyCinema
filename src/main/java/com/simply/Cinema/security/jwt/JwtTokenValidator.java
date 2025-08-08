@@ -32,6 +32,13 @@ public class JwtTokenValidator extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+
+        String path = request.getRequestURI();
+        if (path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs")) {
+            filterChain.doFilter(request, response); // skip JWT check
+            return;
+        }
+
         String jwt = request.getHeader(JwtConstants.JWT_HEADER);
 
         if (jwt != null && jwt.startsWith("Bearer ")) {
